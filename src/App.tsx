@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import ATSCheck from "./pages/ATSCheck";
 import TailorResume from "./pages/TailorResume";
 import FAQ from "./pages/FAQ";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/about" element={<About />} />
             <Route 
               path="/dashboard" 
               element={

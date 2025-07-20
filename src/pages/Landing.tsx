@@ -1,13 +1,37 @@
 import { Button } from '@/components/ui/button';
 import { FeatureCard } from '@/components/FeatureCard';
 import { useNavigate } from 'react-router-dom';
-import { FileSearch, Zap, HelpCircle, ArrowRight } from 'lucide-react';
+import { FileSearch, Zap, HelpCircle, ArrowRight, Info } from 'lucide-react';
 
 const Landing = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen">
+      {/* Navigation */}
+      <nav className="absolute top-0 left-0 right-0 z-10 p-4">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <div className="text-white font-bold text-xl font-poppins">Job Ready</div>
+          <div className="flex gap-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/about')}
+              className="text-white hover:bg-white/10"
+            >
+              <Info className="h-4 w-4 mr-2" />
+              About Us
+            </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/faq')}
+              className="text-white hover:bg-white/10"
+            >
+              FAQ
+            </Button>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <section className="relative gradient-hero py-24 px-4 text-center text-white overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
