@@ -15,11 +15,11 @@ export interface TailorResumeResponse {
 export const apiClient = {
   async atsCheck(resumeFile: File, jobDescription: string): Promise<ATSCheckResponse> {
     const formData = new FormData();
-    formData.append('resume', resumeFile);
+    formData.append('resume_pdf', resumeFile);
     formData.append('job_description', jobDescription);
 
     const token = localStorage.getItem('access_token');
-    const response = await fetch(`${API_BASE_URL}/ats-check`, {
+    const response = await fetch(`${API_BASE_URL}/resume/ats-check`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -37,11 +37,11 @@ export const apiClient = {
 
   async tailorResume(resumeFile: File, jobDescription: string): Promise<TailorResumeResponse> {
     const formData = new FormData();
-    formData.append('resume', resumeFile);
+    formData.append('resume_pdf', resumeFile);
     formData.append('job_description', jobDescription);
 
     const token = localStorage.getItem('access_token');
-    const response = await fetch(`${API_BASE_URL}/tailor-resume`, {
+    const response = await fetch(`${API_BASE_URL}/resume/tailor-resume`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -59,7 +59,7 @@ export const apiClient = {
 
   async downloadResume(filename: string): Promise<Blob> {
     const token = localStorage.getItem('access_token');
-    const response = await fetch(`${API_BASE_URL}/download/${filename}`, {
+    const response = await fetch(`${API_BASE_URL}/resume/download/${filename}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
