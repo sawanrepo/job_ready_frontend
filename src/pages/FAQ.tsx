@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, HelpCircle, Shield, Zap, FileText, Users, Clock } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const FAQ = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const faqs = [
     {
@@ -141,19 +143,30 @@ const FAQ = () => {
                 Join thousands of professionals who have successfully landed their dream jobs with Job Ready.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  onClick={() => navigate('/register')}
-                  className="gradient-primary hover:shadow-glow transition-all duration-300"
-                >
-                  Get Started Today
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate('/login')}
-                  className="hover:bg-primary hover:text-primary-foreground"
-                >
-                  Sign In
-                </Button>
+                {isAuthenticated ? (
+                  <Button 
+                    onClick={() => navigate('/dashboard')}
+                    className="gradient-primary hover:shadow-glow transition-all duration-300"
+                  >
+                    Go to Dashboard
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      onClick={() => navigate('/register')}
+                      className="gradient-primary hover:shadow-glow transition-all duration-300"
+                    >
+                      Get Started Today
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => navigate('/login')}
+                      className="hover:bg-primary hover:text-primary-foreground"
+                    >
+                      Sign In
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

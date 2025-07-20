@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,9 +13,16 @@ const Register = () => {
     password: '',
     confirmPassword: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const { register } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect if already authenticated
+    if (!authLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,15 +31,15 @@ const Register = () => {
       return;
     }
     
-    setIsLoading(true);
+    setIsSubmitting(true);
     
     const success = await register(formData.email, formData.password, formData.fullName);
     
     if (success) {
-      navigate('/login');
+      navigate('/login', { replace: true });
     }
     
-    setIsLoading(false);
+    setIsSubmitting(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,9 +130,9 @@ const Register = () => {
               <Button 
                 type="submit" 
                 className="w-full h-12 gradient-primary hover:shadow-glow transition-all duration-300 font-semibold"
-                disabled={isLoading}
+                disabled={isSubmitting}
               >
-                {isLoading ? 'Creating Account...' : 'Create Account'}
+                {isSubmitting ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
             

@@ -211,6 +211,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_data');
     setUser(null);
+    
+    // Clear browser history to prevent forward navigation to protected routes
+    window.history.replaceState(null, '', '/login');
+    
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",

@@ -13,7 +13,7 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { login, googleLogin, initiateGoogleLogin } = useAuth();
+  const { login, googleLogin, initiateGoogleLogin, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -24,7 +24,7 @@ const Login = () => {
     const success = await login(formData.email, formData.password);
     
     if (success) {
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
     
     setIsLoading(false);
@@ -41,6 +41,14 @@ const Login = () => {
     initiateGoogleLogin();
   };
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
   // Handle OAuth redirect
   useEffect(() => {
     const code = searchParams.get('code');
@@ -48,7 +56,7 @@ const Login = () => {
       setIsGoogleLoading(true);
       googleLogin(code).then((success) => {
         if (success) {
-          navigate('/dashboard');
+          navigate('/dashboard', { replace: true });
         }
         setIsGoogleLoading(false);
       });
