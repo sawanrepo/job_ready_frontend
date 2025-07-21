@@ -86,17 +86,41 @@ const LoadingSkeleton = () => (
   </div>
 );
 
+const AnimatedBackground = () => (
+  <div className="absolute inset-0 overflow-hidden -z-10">
+    {/* Animated gradient background */}
+    <div className="absolute inset-0 gradient-animated opacity-10" />
+    
+    {/* Floating geometric shapes */}
+    <div className="absolute top-10 left-10 w-32 h-32 bg-primary/10 rounded-full animate-float animate-pulse-slow" />
+    <div className="absolute top-32 right-20 w-24 h-24 bg-primary-glow/15 rounded-lg animate-bounce-slow" style={{ animationDelay: '1s' }} />
+    <div className="absolute bottom-20 left-20 w-20 h-20 bg-primary/20 rounded-full animate-rotate-slow" />
+    <div className="absolute bottom-32 right-32 w-16 h-16 bg-primary-glow/25 rounded-lg animate-float" style={{ animationDelay: '2s' }} />
+    <div className="absolute top-1/2 left-1/4 w-12 h-12 bg-primary/15 rounded-full animate-pulse-slow" style={{ animationDelay: '3s' }} />
+    <div className="absolute top-1/3 right-1/3 w-14 h-14 bg-primary-glow/20 rounded-lg animate-bounce-slow" style={{ animationDelay: '0.5s' }} />
+    
+    {/* Grid pattern overlay */}
+    <div className="absolute inset-0 opacity-5" style={{
+      backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)`,
+      backgroundSize: '20px 20px'
+    }} />
+  </div>
+);
+
 export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) => {
   if (isLoading) {
     return (
-      <Card className="gradient-card border-0">
-        <CardHeader>
-          <CardTitle className="font-poppins text-2xl">Analyzing Resume...</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <LoadingSkeleton />
-        </CardContent>
-      </Card>
+      <div className="relative">
+        <AnimatedBackground />
+        <Card className="glass-morphism border-primary/20 shadow-glow">
+          <CardHeader>
+            <CardTitle className="font-poppins text-2xl text-gradient">Analyzing Resume...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LoadingSkeleton />
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -118,42 +142,47 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
   const actionVerbsCount = result.action_verbs_count ?? 0;
 
   return (
-    <Card className="gradient-card border-0">
-      <CardHeader>
-        <CardTitle className="font-poppins text-2xl">Analysis Results</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-8">
-        {/* Main Score and Keyword Match */}
-        <div className="grid md:grid-cols-3 gap-6 items-center">
-          <div className="md:col-span-1 flex justify-center">
-            <CircularProgress value={score} />
-          </div>
-          <div className="md:col-span-2 space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Keyword Match</span>
-                <span className="text-sm text-muted-foreground">{keywordMatch}%</span>
+    <div className="relative">
+      <AnimatedBackground />
+      <Card className="glass-morphism border-primary/20 shadow-glow animate-fade-in">
+        <CardHeader>
+          <CardTitle className="font-poppins text-3xl text-gradient">Analysis Results</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          {/* Main Score and Keyword Match */}
+          <div className="grid md:grid-cols-3 gap-6 items-center">
+            <div className="md:col-span-1 flex justify-center animate-scale-in" style={{ animationDelay: '0.2s' }}>
+              <div className="relative">
+                <CircularProgress value={score} />
+                <div className="absolute -inset-4 bg-primary/10 rounded-full animate-pulse-slow" />
               </div>
-              <Progress value={keywordMatch} className="h-3" />
             </div>
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Action Verbs: <strong>{actionVerbsCount}</strong></span>
+            <div className="md:col-span-2 space-y-6 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+              <div className="glass-morphism p-4 rounded-lg border border-primary/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-foreground">Keyword Match</span>
+                  <span className="text-sm font-bold text-primary">{keywordMatch}%</span>
+                </div>
+                <Progress value={keywordMatch} className="h-3 bg-muted/30" />
+              </div>
+              <div className="flex items-center gap-2 glass-morphism p-3 rounded-lg border border-primary/10">
+                <Hash className="h-5 w-5 text-primary animate-pulse-slow" />
+                <span className="text-sm font-medium">Action Verbs: <strong className="text-primary">{actionVerbsCount}</strong></span>
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Skills Section */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              Matched Skills
+        <div className="grid md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+          <div className="glass-morphism p-6 rounded-xl border border-success/20 shadow-soft">
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-success animate-pulse-slow" />
+              <span className="text-gradient">Matched Skills</span>
             </h4>
             <div className="flex flex-wrap gap-2">
               {matchedSkills.length > 0 ? (
                 matchedSkills.map((skill, index) => (
-                  <Badge key={index} variant="default" className="bg-green-100 text-green-800 border-green-200">
+                  <Badge key={index} className="bg-success/10 text-success border-success/30 hover-scale animate-fade-in" style={{ animationDelay: `${0.1 * index}s` }}>
                     {skill}
                   </Badge>
                 ))
@@ -162,15 +191,15 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
               )}
             </div>
           </div>
-          <div>
-            <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-500" />
-              Missing Skills
+          <div className="glass-morphism p-6 rounded-xl border border-destructive/20 shadow-soft">
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-destructive animate-pulse-slow" />
+              <span className="text-gradient">Missing Skills</span>
             </h4>
             <div className="flex flex-wrap gap-2">
               {missingSkills.length > 0 ? (
                 missingSkills.map((skill, index) => (
-                  <Badge key={index} variant="outline" className="border-red-200 text-red-700">
+                  <Badge key={index} variant="outline" className="border-destructive/30 text-destructive hover-scale animate-fade-in" style={{ animationDelay: `${0.1 * index}s` }}>
                     {skill}
                   </Badge>
                 ))
@@ -182,58 +211,58 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
         </div>
 
         {/* Alignment Cards */}
-        <div className="grid md:grid-cols-3 gap-4">
-          <Card className="bg-white/50 border-0">
+        <div className="grid md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: '0.8s' }}>
+          <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Job Title Match
+                <User className="h-4 w-4 text-primary animate-pulse-slow" />
+                <span className="text-gradient">Job Title Match</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-sm text-muted-foreground">{jobTitleMatch || 'No information available'}</p>
+              <p className="text-sm text-foreground font-medium">{jobTitleMatch || 'No information available'}</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/50 border-0">
+          <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Experience
+                <TrendingUp className="h-4 w-4 text-primary animate-pulse-slow" />
+                <span className="text-gradient">Experience</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-sm text-muted-foreground">{experienceAlignment || 'No information available'}</p>
+              <p className="text-sm text-foreground font-medium">{experienceAlignment || 'No information available'}</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/50 border-0">
+          <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
-                <GraduationCap className="h-4 w-4" />
-                Education
+                <GraduationCap className="h-4 w-4 text-primary animate-pulse-slow" />
+                <span className="text-gradient">Education</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-sm text-muted-foreground">{educationAlignment || 'No information available'}</p>
+              <p className="text-sm text-foreground font-medium">{educationAlignment || 'No information available'}</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Issues and Feedback Sections */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '1s' }}>
           {/* Format Issues */}
           {formatIssues.length > 0 && (
-            <div>
-              <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-500" />
-                Format Issues
+            <div className="glass-morphism p-6 rounded-xl border border-primary/20 shadow-soft">
+              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary animate-pulse-slow" />
+                <span className="text-gradient">Format Issues</span>
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {formatIssues.map((issue, index) => (
-                  <div key={index} className="flex items-start gap-2 bg-white/30 p-3 rounded-lg">
-                    <AlertTriangle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-muted-foreground">{issue}</span>
+                  <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-primary/10 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
+                    <AlertTriangle className="h-4 w-4 text-primary mt-1 flex-shrink-0 animate-pulse-slow" />
+                    <span className="text-sm text-foreground font-medium">{issue}</span>
                   </div>
                 ))}
               </div>
@@ -242,16 +271,16 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
 
           {/* Red Flags */}
           {redFlags.length > 0 && (
-            <div>
-              <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                Red Flags
+            <div className="glass-morphism p-6 rounded-xl border border-destructive/20 shadow-soft">
+              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive animate-pulse-slow" />
+                <span className="text-gradient">Red Flags</span>
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {redFlags.map((flag, index) => (
-                  <div key={index} className="flex items-start gap-2 bg-red-50 p-3 rounded-lg border border-red-100">
-                    <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-red-700">{flag}</span>
+                  <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-destructive/20 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
+                    <XCircle className="h-4 w-4 text-destructive mt-1 flex-shrink-0 animate-pulse-slow" />
+                    <span className="text-sm text-destructive font-medium">{flag}</span>
                   </div>
                 ))}
               </div>
@@ -261,16 +290,16 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
 
         {/* Improvement Suggestions */}
         {suggestions.length > 0 && (
-          <div>
-            <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-yellow-500" />
-              Improvement Suggestions
+          <div className="glass-morphism p-6 rounded-xl border border-warning/20 shadow-soft animate-fade-in" style={{ animationDelay: '1.2s' }}>
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-warning animate-pulse-slow" />
+              <span className="text-gradient">Improvement Suggestions</span>
             </h4>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {suggestions.map((suggestion, index) => (
-                <div key={index} className="flex items-start gap-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                  <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-yellow-800">{suggestion}</span>
+                <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-warning/20 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
+                  <Lightbulb className="h-4 w-4 text-warning mt-1 flex-shrink-0 animate-pulse-slow" />
+                  <span className="text-sm text-foreground font-medium">{suggestion}</span>
                 </div>
               ))}
             </div>
@@ -279,14 +308,15 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
 
         {/* Legacy Feedback (fallback) */}
         {result.feedback && (
-          <div>
-            <h4 className="text-lg font-semibold mb-3">Detailed Feedback</h4>
-            <p className="text-muted-foreground leading-relaxed bg-white/30 p-4 rounded-lg">
+          <div className="glass-morphism p-6 rounded-xl border border-primary/20 shadow-soft animate-fade-in" style={{ animationDelay: '1.4s' }}>
+            <h4 className="text-lg font-semibold mb-4 text-gradient">Detailed Feedback</h4>
+            <p className="text-foreground leading-relaxed font-medium">
               {result.feedback}
             </p>
           </div>
         )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
