@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { FileUpload } from '@/components/FileUpload';
+import { ATSResultDisplay } from '@/components/ATSResultDisplay';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { apiClient, ATSCheckResponse } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
@@ -47,17 +48,6 @@ const ATSCheck = () => {
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getScoreIcon = (score: number) => {
-    if (score >= 80) return CheckCircle;
-    if (score >= 60) return AlertCircle;
-    return TrendingUp;
-  };
 
   return (
     <div className="min-h-screen bg-secondary/30">
@@ -123,55 +113,7 @@ const ATSCheck = () => {
         </div>
 
         {/* Results */}
-        {result && (
-          <Card className="gradient-card border-0">
-            <CardHeader>
-              <CardTitle className="font-poppins text-2xl">Analysis Results</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Score */}
-              <div className="text-center p-6 rounded-lg bg-white/50">
-                <div className="flex items-center justify-center mb-4">
-                  {(() => {
-                    const ScoreIcon = getScoreIcon(result.score);
-                    return <ScoreIcon className={`h-16 w-16 ${getScoreColor(result.score)}`} />;
-                  })()}
-                </div>
-                <h3 className="text-3xl font-bold mb-2 font-poppins">
-                  ATS Score: <span className={getScoreColor(result.score)}>{result.score}%</span>
-                </h3>
-                <p className="text-muted-foreground">
-                  {result.score >= 80 ? 'Excellent match!' : 
-                   result.score >= 60 ? 'Good match with room for improvement' : 
-                   'Needs significant improvements'}
-                </p>
-              </div>
-
-              {/* Feedback */}
-              <div>
-                <h4 className="text-xl font-semibold mb-3 font-poppins">Detailed Feedback</h4>
-                <p className="text-muted-foreground leading-relaxed bg-white/30 p-4 rounded-lg">
-                  {result.feedback}
-                </p>
-              </div>
-
-              {/* Suggestions */}
-              {result.suggestions && result.suggestions.length > 0 && (
-                <div>
-                  <h4 className="text-xl font-semibold mb-3 font-poppins">Improvement Suggestions</h4>
-                  <ul className="space-y-2">
-                    {result.suggestions.map((suggestion, index) => (
-                      <li key={index} className="flex items-start space-x-2 bg-white/30 p-3 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-muted-foreground">{suggestion}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        <ATSResultDisplay result={result} isLoading={isLoading} />
       </main>
     </div>
   );

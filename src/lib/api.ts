@@ -1,9 +1,21 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { apiWrapper } from './apiWrapper';
 
 export interface ATSCheckResponse {
-  score: number;
-  feedback: string;
-  suggestions: string[];
+  ats_score: number;
+  keyword_match_percentage: number;
+  matched_skills: string[];
+  missing_skills: string[];
+  job_title_match: string;
+  experience_alignment: string;
+  education_alignment: string;
+  resume_format_compliance: string[];
+  action_verbs_count: number;
+  red_flags: string[];
+  improvement_suggestions: string[];
+  feedback?: string;
+  suggestions?: string[];
+  // Legacy fields for backward compatibility
+  score?: number;
 }
 
 export interface TailorResumeResponse {
@@ -18,14 +30,7 @@ export const apiClient = {
     formData.append('resume_pdf', resumeFile);
     formData.append('job_description', jobDescription);
 
-    const token = localStorage.getItem('access_token');
-    const response = await fetch(`${API_BASE_URL}/resume/ats-check`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    const response = await apiWrapper.post('/resume/ats-check', formData);
 
     if (!response.ok) {
       const error = await response.json();
@@ -40,14 +45,7 @@ export const apiClient = {
     formData.append('resume_pdf', resumeFile);
     formData.append('job_description', jobDescription);
 
-    const token = localStorage.getItem('access_token');
-    const response = await fetch(`${API_BASE_URL}/resume/tailor-resume`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    const response = await apiWrapper.post('/resume/tailor-resume', formData);
 
     if (!response.ok) {
       const error = await response.json();
@@ -58,13 +56,7 @@ export const apiClient = {
   },
 
   async downloadResume(filename: string): Promise<Blob> {
-    const token = localStorage.getItem('access_token');
-    const response = await fetch(`${API_BASE_URL}/resume/download/${filename}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    const response = await apiWrapper.get(`/resume/download/${filename}`);
 
     if (!response.ok) {
       throw new Error('Download failed');
