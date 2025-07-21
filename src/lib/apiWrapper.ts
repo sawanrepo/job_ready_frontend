@@ -135,14 +135,17 @@ class ApiWrapper {
   async post(endpoint: string, body?: FormData | object, headers?: Record<string, string>) {
     const isFormData = body instanceof FormData;
     
+    const finalHeaders = isFormData ? headers || {} : {
+      'Content-Type': 'application/json',
+      ...(headers || {}),
+    };
+
     return this.request(endpoint, {
-      method: 'POST',
-      headers: {
-        ...(!isFormData && { 'Content-Type': 'application/json' }),
-        ...headers,
-      },
-      body: isFormData ? body : JSON.stringify(body),
+     method: 'POST',
+    headers: finalHeaders,
+    body: isFormData ? body : JSON.stringify(body),
     });
+
   }
 
   async put(endpoint: string, body?: FormData | object, headers?: Record<string, string>) {
