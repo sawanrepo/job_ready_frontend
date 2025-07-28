@@ -24,6 +24,17 @@ export interface TailorResumeResponse {
   download_url: string;
 }
 
+export interface UsageResponse {
+  ats_checks_left_today: number;
+  resume_tailoring_left_this_week: number;
+  mock_interviews_left_this_month: number;
+  next_reset_times: {
+    ats_check: string;
+    resume_tailoring: string;
+    mock_interview: string;
+  };
+}
+
 export const apiClient = {
   async atsCheck(resumeFile: File, jobDescription: string): Promise<ATSCheckResponse> {
     const formData = new FormData();
@@ -63,5 +74,16 @@ export const apiClient = {
     }
 
     return response.blob();
+  },
+
+  async getUsage(): Promise<UsageResponse> {
+    const response = await apiWrapper.get('/resume/usage');
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to fetch usage data');
+    }
+
+    return response.json();
   },
 };

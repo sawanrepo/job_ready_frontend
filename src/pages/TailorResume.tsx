@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { FileUpload } from '@/components/FileUpload';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Download, FileText, CreditCard } from 'lucide-react';
 import { apiClient, TailorResumeResponse } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
+import { useUsage } from '@/hooks/useUsage';
 
 const TailorResume = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -14,6 +15,7 @@ const TailorResume = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<TailorResumeResponse | null>(null);
   const navigate = useNavigate();
+  const { usage, isLoading: usageLoading, formatResetTime, triggerPaymentFlow, fetchUsage } = useUsage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +29,22 @@ const TailorResume = () => {
       return;
     }
 
+    if (usage && usage.resume_tailoring_left_this_week === 0) {
+      toast({
+        variant: "destructive",
+        title: "No tailorings remaining",
+        description: "You have used all your weekly resume tailorings. Please wait for reset or purchase additional tailorings.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
       const response = await apiClient.tailorResume(selectedFile, jobDescription);
       setResult(response);
+      // Refresh usage data after successful tailoring
+      fetchUsage();
       toast({
         title: "Resume tailored successfully!",
         description: "Your tailored resume is ready for download.",
@@ -46,6 +59,9 @@ const TailorResume = () => {
       setIsLoading(false);
     }
   };
+
+  const canRunTailoring = usage && usage.resume_tailoring_left_this_week > 0;
+  const hasUsageData = usage && !usageLoading;
 
   const handleDownload = async () => {
     if (!result) return;
@@ -95,6 +111,22 @@ const TailorResume = () => {
           <p className="text-xl text-muted-foreground">
             Create a job-specific resume using AI-powered optimization
           </p>
+          
+          {/* Usage Information */}
+          {usage && !usageLoading && (
+            <div className="mt-6 p-4 bg-white/50 rounded-lg border border-primary/20">
+              <div className="flex items-center justify-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {usage.resume_tailoring_left_this_week} tailorings left this week
+                  </span>
+                </div>
+                <div className="text-muted-foreground">
+                  Next reset: {formatResetTime(usage.next_reset_times.resume_tailoring)}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8 mb-8">
@@ -127,15 +159,47 @@ const TailorResume = () => {
           </Card>
         </div>
 
-        <div className="text-center mb-8">
-          <Button
-            onClick={handleSubmit}
-            disabled={isLoading || !selectedFile || !jobDescription.trim()}
-            className="gradient-primary hover:shadow-glow transition-all duration-300 px-8 py-3"
-            size="lg"
-          >
-            {isLoading ? 'Tailoring Resume...' : 'Tailor Resume'}
-          </Button>
+        <div className="text-center mb-8 space-y-4">
+          {hasUsageData && canRunTailoring ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isLoading || !selectedFile || !jobDescription.trim()}
+              className="gradient-primary hover:shadow-glow transition-all duration-300 px-8 py-3"
+              size="lg"
+            >
+              {isLoading ? 'Tailoring Resume...' : 'Tailor Resume'}
+            </Button>
+          ) : hasUsageData && !canRunTailoring ? (
+            <div className="space-y-3">
+              <Button
+                disabled
+                className="px-8 py-3 opacity-50"
+                size="lg"
+              >
+                Tailor Resume (0 tailorings left)
+              </Button>
+              <div>
+                <Button
+                  onClick={triggerPaymentFlow}
+                  variant="outline"
+                  className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                  size="lg"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Pay ₹20 to get 1 extra tailoring
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={isLoading || !selectedFile || !jobDescription.trim() || usageLoading}
+              className="gradient-primary hover:shadow-glow transition-all duration-300 px-8 py-3"
+              size="lg"
+            >
+              {usageLoading ? 'Loading...' : isLoading ? 'Tailoring Resume...' : 'Tailor Resume'}
+            </Button>
+          )}
         </div>
 
         {/* Results */}
