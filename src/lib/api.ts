@@ -86,4 +86,26 @@ export const apiClient = {
 
     return response.json();
   },
+
+  async createOrder(plan: string): Promise<any> {
+    const response = await apiWrapper.post(`/payment/create-order/${plan}`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create order');
+    }
+
+    return response.json();
+  },
+
+  async verifyPayment(paymentData: any): Promise<any> {
+    const response = await apiWrapper.post('/payment/payment/verify', paymentData);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Payment verification failed');
+    }
+
+    return response.json();
+  }
 };

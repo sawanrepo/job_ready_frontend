@@ -20,7 +20,7 @@ const ATSCheck = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedFile || !jobDescription.trim()) {
       toast({
         variant: "destructive",
@@ -40,7 +40,7 @@ const ATSCheck = () => {
     }
 
     setIsLoading(true);
-    
+
     try {
       const response = await apiClient.atsCheck(selectedFile, jobDescription);
       setResult(response);
@@ -85,7 +85,7 @@ const ATSCheck = () => {
           <p className="text-xl text-muted-foreground">
             Upload your resume and job description to get detailed ATS compatibility feedback
           </p>
-          
+
           {/* Usage Information */}
           {usage && !usageLoading && (
             <div className="mt-6 p-4 bg-white/50 rounded-lg border border-primary/20">
@@ -154,7 +154,7 @@ const ATSCheck = () => {
               </Button>
               <div>
                 <Button
-                  onClick={triggerPaymentFlow}
+                  onClick={() => triggerPaymentFlow('one_time')}
                   variant="outline"
                   className="border-orange-500 text-orange-600 hover:bg-orange-50"
                   size="lg"
