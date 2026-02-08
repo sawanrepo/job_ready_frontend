@@ -3,17 +3,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
-  Lightbulb, 
-  User, 
-  GraduationCap, 
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Lightbulb,
+  User,
+  GraduationCap,
   FileText,
   TrendingUp,
   Hash
 } from 'lucide-react';
+
+import ReactMarkdown from 'react-markdown';
 
 interface ATSResultDisplayProps {
   result: ATSCheckResponse | null;
@@ -150,149 +152,161 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
             </div>
           </div>
 
-        {/* Skills Section */}
-        <div className="grid md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '0.6s' }}>
-          <div className="glass-morphism p-6 rounded-xl border border-success/20 shadow-soft">
-            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-success animate-pulse-slow" />
-              <span className="text-gradient">Matched Skills</span>
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {matchedSkills.length > 0 ? (
-                matchedSkills.map((skill, index) => (
-                  <Badge key={index} className="bg-success/10 text-success border-success/30 hover-scale animate-fade-in" style={{ animationDelay: `${0.1 * index}s` }}>
-                    {skill}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No matched skills identified</p>
-              )}
-            </div>
-          </div>
-          <div className="glass-morphism p-6 rounded-xl border border-destructive/20 shadow-soft">
-            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-destructive animate-pulse-slow" />
-              <span className="text-gradient">Missing Skills</span>
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {missingSkills.length > 0 ? (
-                missingSkills.map((skill, index) => (
-                  <Badge key={index} variant="outline" className="border-destructive/30 text-destructive hover-scale animate-fade-in" style={{ animationDelay: `${0.1 * index}s` }}>
-                    {skill}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No missing skills identified</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Alignment Cards */}
-        <div className="grid md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: '0.8s' }}>
-          <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <User className="h-4 w-4 text-primary animate-pulse-slow" />
-                <span className="text-gradient">Job Title Match</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-sm text-foreground font-medium">{jobTitleMatch || 'No information available'}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary animate-pulse-slow" />
-                <span className="text-gradient">Experience</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-sm text-foreground font-medium">{experienceAlignment || 'No information available'}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <GraduationCap className="h-4 w-4 text-primary animate-pulse-slow" />
-                <span className="text-gradient">Education</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-sm text-foreground font-medium">{educationAlignment || 'No information available'}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Issues and Feedback Sections */}
-        <div className="grid md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '1s' }}>
-          {/* Format Issues */}
-          {formatIssues.length > 0 && (
-            <div className="glass-morphism p-6 rounded-xl border border-primary/20 shadow-soft">
+          {/* Skills Section */}
+          <div className="grid md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+            <div className="glass-morphism p-6 rounded-xl border border-success/20 shadow-soft">
               <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary animate-pulse-slow" />
-                <span className="text-gradient">Format Issues</span>
+                <CheckCircle className="h-5 w-5 text-success animate-pulse-slow" />
+                <span className="text-gradient">Matched Skills</span>
               </h4>
-              <div className="space-y-3">
-                {formatIssues.map((issue, index) => (
-                  <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-primary/10 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
-                    <AlertTriangle className="h-4 w-4 text-primary mt-1 flex-shrink-0 animate-pulse-slow" />
-                    <span className="text-sm text-foreground font-medium">{issue}</span>
-                  </div>
-                ))}
+              <div className="flex flex-wrap gap-2">
+                {matchedSkills.length > 0 ? (
+                  matchedSkills.map((skill, index) => (
+                    <Badge key={index} className="bg-success/10 text-success border-success/30 hover-scale animate-fade-in" style={{ animationDelay: `${0.1 * index}s` }}>
+                      {skill}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No matched skills identified</p>
+                )}
               </div>
             </div>
-          )}
-
-          {/* Red Flags */}
-          {redFlags.length > 0 && (
             <div className="glass-morphism p-6 rounded-xl border border-destructive/20 shadow-soft">
               <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-destructive animate-pulse-slow" />
-                <span className="text-gradient">Red Flags</span>
+                <XCircle className="h-5 w-5 text-destructive animate-pulse-slow" />
+                <span className="text-gradient">Missing Skills</span>
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {missingSkills.length > 0 ? (
+                  missingSkills.map((skill, index) => (
+                    <Badge key={index} variant="outline" className="border-destructive/30 text-destructive hover-scale animate-fade-in" style={{ animationDelay: `${0.1 * index}s` }}>
+                      {skill}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No missing skills identified</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Alignment Cards */}
+          <div className="grid md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: '0.8s' }}>
+            <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary animate-pulse-slow" />
+                  <span className="text-gradient">Job Title Match</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-sm text-foreground font-medium">
+                  <ReactMarkdown>{jobTitleMatch || 'No information available'}</ReactMarkdown>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary animate-pulse-slow" />
+                  <span className="text-gradient">Experience</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-sm text-foreground font-medium">
+                  <ReactMarkdown>{experienceAlignment || 'No information available'}</ReactMarkdown>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-morphism border-primary/20 shadow-soft hover-scale">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-primary animate-pulse-slow" />
+                  <span className="text-gradient">Education</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-sm text-foreground font-medium">
+                  <ReactMarkdown>{educationAlignment || 'No information available'}</ReactMarkdown>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Issues and Feedback Sections */}
+          <div className="grid md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '1s' }}>
+            {/* Format Issues */}
+            {formatIssues.length > 0 && (
+              <div className="glass-morphism p-6 rounded-xl border border-primary/20 shadow-soft">
+                <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary animate-pulse-slow" />
+                  <span className="text-gradient">Format Issues</span>
+                </h4>
+                <div className="space-y-3">
+                  {formatIssues.map((issue, index) => (
+                    <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-primary/10 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
+                      <AlertTriangle className="h-4 w-4 text-primary mt-1 flex-shrink-0 animate-pulse-slow" />
+                      <span className="text-sm text-foreground font-medium">
+                        <ReactMarkdown>{issue}</ReactMarkdown>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Red Flags */}
+            {redFlags.length > 0 && (
+              <div className="glass-morphism p-6 rounded-xl border border-destructive/20 shadow-soft">
+                <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive animate-pulse-slow" />
+                  <span className="text-gradient">Red Flags</span>
+                </h4>
+                <div className="space-y-3">
+                  {redFlags.map((flag, index) => (
+                    <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-destructive/20 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
+                      <XCircle className="h-4 w-4 text-destructive mt-1 flex-shrink-0 animate-pulse-slow" />
+                      <span className="text-sm text-destructive font-medium">
+                        <ReactMarkdown>{flag}</ReactMarkdown>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Improvement Suggestions */}
+          {suggestions.length > 0 && (
+            <div className="glass-morphism p-6 rounded-xl border border-warning/20 shadow-soft animate-fade-in" style={{ animationDelay: '1.2s' }}>
+              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-warning animate-pulse-slow" />
+                <span className="text-gradient">Improvement Suggestions</span>
               </h4>
               <div className="space-y-3">
-                {redFlags.map((flag, index) => (
-                  <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-destructive/20 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
-                    <XCircle className="h-4 w-4 text-destructive mt-1 flex-shrink-0 animate-pulse-slow" />
-                    <span className="text-sm text-destructive font-medium">{flag}</span>
+                {suggestions.map((suggestion, index) => (
+                  <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-warning/20 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
+                    <Lightbulb className="h-4 w-4 text-warning mt-1 flex-shrink-0 animate-pulse-slow" />
+                    <span className="text-sm text-foreground font-medium">
+                      <ReactMarkdown>{suggestion}</ReactMarkdown>
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-        </div>
 
-        {/* Improvement Suggestions */}
-        {suggestions.length > 0 && (
-          <div className="glass-morphism p-6 rounded-xl border border-warning/20 shadow-soft animate-fade-in" style={{ animationDelay: '1.2s' }}>
-            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-warning animate-pulse-slow" />
-              <span className="text-gradient">Improvement Suggestions</span>
-            </h4>
-            <div className="space-y-3">
-              {suggestions.map((suggestion, index) => (
-                <div key={index} className="flex items-start gap-3 glass-morphism p-4 rounded-lg border border-warning/20 animate-fade-in hover-scale" style={{ animationDelay: `${0.1 * index}s` }}>
-                  <Lightbulb className="h-4 w-4 text-warning mt-1 flex-shrink-0 animate-pulse-slow" />
-                  <span className="text-sm text-foreground font-medium">{suggestion}</span>
-                </div>
-              ))}
+          {/* Legacy Feedback (fallback) */}
+          {result.feedback && (
+            <div className="glass-morphism p-6 rounded-xl border border-primary/20 shadow-soft animate-fade-in" style={{ animationDelay: '1.4s' }}>
+              <h4 className="text-lg font-semibold mb-4 text-gradient">Detailed Feedback</h4>
+              <div className="text-foreground leading-relaxed font-medium">
+                <ReactMarkdown>{result.feedback}</ReactMarkdown>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Legacy Feedback (fallback) */}
-        {result.feedback && (
-          <div className="glass-morphism p-6 rounded-xl border border-primary/20 shadow-soft animate-fade-in" style={{ animationDelay: '1.4s' }}>
-            <h4 className="text-lg font-semibold mb-4 text-gradient">Detailed Feedback</h4>
-            <p className="text-foreground leading-relaxed font-medium">
-              {result.feedback}
-            </p>
-          </div>
-        )}
+          )}
         </CardContent>
       </Card>
     </div>
