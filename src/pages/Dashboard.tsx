@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FileSearch, Zap, Download, LogOut, User } from 'lucide-react';
+import { FileSearch, Zap, Download, LogOut, User, Video } from 'lucide-react';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -33,6 +33,14 @@ const Dashboard = () => {
       color: 'text-green-600',
       bg: 'bg-green-50',
     },
+    {
+      icon: Video,
+      title: 'Mock Interview',
+      description: 'Practice with AI-driven video mock interviews',
+      path: '/interview',
+      color: 'text-red-600',
+      bg: 'bg-red-50',
+    },
   ];
 
   return (
@@ -41,7 +49,7 @@ const Dashboard = () => {
       <header className="bg-white shadow-soft border-b">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gradient font-poppins">Job Ready</h1>
-          
+
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-muted-foreground">
               <User className="h-4 w-4" />
@@ -72,7 +80,7 @@ const Dashboard = () => {
 
         <div className="grid md:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <Card 
+            <Card
               key={index}
               className="group cursor-pointer transition-all duration-300 hover:shadow-strong hover:-translate-y-2 gradient-card border-0"
               onClick={() => navigate(feature.path)}
@@ -83,16 +91,16 @@ const Dashboard = () => {
                     <feature.icon className={`h-8 w-8 ${feature.color}`} />
                   </div>
                 </div>
-                
+
                 <h3 className="text-xl font-semibold mb-3 font-poppins">
                   {feature.title}
                 </h3>
-                
+
                 <p className="text-muted-foreground mb-6 leading-relaxed">
                   {feature.description}
                 </p>
-                
-                <Button 
+
+                <Button
                   className="w-full gradient-primary hover:shadow-glow transition-all duration-300"
                 >
                   Get Started
@@ -111,7 +119,7 @@ const Dashboard = () => {
               <p className="text-muted-foreground mb-6">
                 Check out our FAQ section for tips and best practices
               </p>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => navigate('/faq')}
                 className="hover:bg-primary hover:text-primary-foreground"
