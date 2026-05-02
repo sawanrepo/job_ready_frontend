@@ -36,7 +36,7 @@ const Register = () => {
     const success = await register(formData.email, formData.password, formData.fullName);
     
     if (success) {
-      navigate('/login', { replace: true });
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`, { replace: true });
     }
     
     setIsSubmitting(false);

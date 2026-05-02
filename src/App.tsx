@@ -18,6 +18,7 @@ import InterviewResults from "./pages/InterviewResults";
 import FAQ from "./pages/FAQ";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
+import VerifyEmail from "./pages/VerifyEmail";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/about" element={<About />} />
             <Route

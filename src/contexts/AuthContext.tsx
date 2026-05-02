@@ -12,6 +12,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, full_name: string) => Promise<boolean>;
+  verifyOtp: (email: string, otp: string) => Promise<boolean>;
+  resendOtp: (email: string) => Promise<boolean>;
   googleLogin: (code: string) => Promise<boolean>;
   initiateGoogleLogin: () => void;
   logout: () => void;
@@ -115,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         toast({
           title: "Registration successful!",
-          description: "Please log in with your credentials.",
+          description: "Please check your email for the verification code.",
         });
         
         return true;
@@ -132,6 +134,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         variant: "destructive",
         title: "Registration failed",
+        description: "Network error. Please try again.",
+      });
+      return false;
+    }
+  };
+
+  const verifyOtp = async (email: string, otp: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        localStorage.setItem('access_token', data.access_token);
+        if (data.refresh_token) {
+          localStorage.setItem('refresh_token', data.refresh_token);
+        }
+        
+        const userData = {
+          id: data.user_id || '1',
+          email: email,
+          full_name: data.full_name || 'User'
+        };
+        
+        localStorage.setItem('user_data', JSON.stringify(userData));
+        setUser(userData);
+        
+        toast({
+          title: "Email verified!",
+          description: "You have successfully verified your email.",
+        });
+        
+        return true;
+      } else {
+        const errorData = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Verification failed",
+          description: errorData.detail || "Invalid code",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Verification failed",
+        description: "Network error. Please try again.",
+      });
+      return false;
+    }
+  };
+
+  const resendOtp = async (email: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "OTP Resent",
+          description: "A new verification code has been sent to your email.",
+        });
+        return true;
+      } else {
+        const errorData = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Resend failed",
+          description: errorData.detail || "Failed to resend code",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Resend failed",
         description: "Network error. Please try again.",
       });
       return false;
@@ -226,6 +315,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     login,
     register,
+    verifyOtp,
+    resendOtp,
     googleLogin,
     initiateGoogleLogin,
     logout,
