@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { InterviewResult } from '@/types/interview';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
-const INTERVIEW_API_URL = 'http://localhost:8000/interview';
+const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
 
 const InterviewResults: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();

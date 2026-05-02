@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Loader2, Mic, Square, Send } from 'lucide-react';
 import { InterviewResponse } from '@/types/interview';
 
-const INTERVIEW_API_URL = 'http://localhost:8000/interview';
+const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
 
 const InterviewSession: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
@@ -16,13 +16,13 @@ const InterviewSession: React.FC = () => {
     const [questionData, setQuestionData] = useState<InterviewResponse | null>(location.state?.initialData || null);
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const chunksRef = useRef<Blob[]>([]);
 
     // Initialize Camera
     useEffect(() => {
@@ -50,7 +50,7 @@ const InterviewSession: React.FC = () => {
     const startRecording = () => {
         if (!streamRef.current) return;
 
-        setRecordedChunks([]);
+        chunksRef.current = [];
         setVideoUrl(null);
 
         const mediaRecorder = new MediaRecorder(streamRef.current);
@@ -58,8 +58,14 @@ const InterviewSession: React.FC = () => {
 
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
-                setRecordedChunks((prev) => [...prev, event.data]);
+                chunksRef.current.push(event.data);
             }
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            setVideoUrl(url);
         };
 
         mediaRecorder.start();
@@ -67,34 +73,17 @@ const InterviewSession: React.FC = () => {
     };
 
     const stopRecording = () => {
-        if (mediaRecorderRef.current) {
+        if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
-
-            // Create preview URL after a short delay to ensure chunks are gathered
-            // In a real app we'd use 'onstop' event better
-            setTimeout(() => {
-                // This logic is slightly flawed because chunks state update might be async
-                // Better to use a ref for chunks or handle create inside onstop
-            }, 100);
         }
     };
 
-    // Better stop handling
-    useEffect(() => {
-        if (!isRecording && recordedChunks.length > 0) {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            setVideoUrl(url);
-        }
-    }, [isRecording, recordedChunks]);
-
-
     const submitResponse = async () => {
-        if (recordedChunks.length === 0 || !sessionId) return;
+        if (chunksRef.current.length === 0 || !sessionId) return;
 
         setIsProcessing(true);
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
         const formData = new FormData();
         formData.append('video', blob, 'response.webm');
 
@@ -112,7 +101,7 @@ const InterviewSession: React.FC = () => {
                 navigate(`/interview/results/${sessionId}`);
             } else {
                 setQuestionData(result);
-                setRecordedChunks([]);
+                chunksRef.current = [];
                 setVideoUrl(null);
             }
         } catch (error) {

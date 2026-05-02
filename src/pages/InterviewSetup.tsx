@@ -9,7 +9,7 @@ import { FileUpload } from '@/components/FileUpload';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
 
-const INTERVIEW_API_URL = 'http://localhost:8000/interview'; // Should be in env
+const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
 
 const InterviewSetup: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -73,10 +73,21 @@ const InterviewSetup: React.FC = () => {
             navigate(`/interview/session/${result.session_id}`, { state: { initialData: result } });
         } catch (error: any) {
             console.error(error);
+            const isCompatibilityError = error.message?.includes("not compatible with our ATS checker") || 
+                                        error.message?.includes("image-based") ||
+                                        error.message?.includes("No extractable text");
+            
+            const isTooLongError = error.message?.includes("too long") || 
+                                  error.message?.includes("1 or 2 page");
+
             toast({
                 variant: "destructive",
-                title: "Error",
-                description: error.message || "Failed to start interview. Please try again.",
+                title: isCompatibilityError ? "Compatibility Issue" : isTooLongError ? "PDF Too Long" : "Error",
+                description: isCompatibilityError 
+                    ? "The uploaded PDF is not compatible with our ATS checker. Either the uploaded PDF is image-based or doesn't have text that is valid for a general ATS check. Please use a text-based (Lex-based) resume for better results."
+                    : isTooLongError
+                    ? "PDF is too long to be a valid resume. Please upload a resume of 1 or 2 pages."
+                    : (error.message || "Failed to start interview. Please try again."),
             });
         } finally {
             setIsLoading(false);

@@ -49,11 +49,22 @@ const TailorResume = () => {
         title: "Resume tailored successfully!",
         description: "Your tailored resume is ready for download.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      const isCompatibilityError = error.message?.includes("not compatible with our ATS checker") || 
+                                  error.message?.includes("image-based") ||
+                                  error.message?.includes("No extractable text");
+      
+      const isTooLongError = error.message?.includes("too long") || 
+                            error.message?.includes("1 or 2 page");
+
       toast({
         variant: "destructive",
-        title: "Tailoring failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        title: isCompatibilityError ? "Compatibility Issue" : isTooLongError ? "PDF Too Long" : "Tailoring failed",
+        description: isCompatibilityError 
+          ? "The uploaded PDF is not compatible with our ATS checker. Either the uploaded PDF is image-based or doesn't have text that is valid for a general ATS check. Please use a text-based (Lex-based) resume for better results."
+          : isTooLongError
+          ? "PDF is too long to be a valid resume. Please upload a resume of 1 or 2 pages."
+          : (error instanceof Error ? error.message : "Something went wrong"),
       });
     } finally {
       setIsLoading(false);
@@ -180,7 +191,7 @@ const TailorResume = () => {
               </Button>
               <div>
                 <Button
-                  onClick={triggerPaymentFlow}
+                  onClick={() => triggerPaymentFlow('one_time')}
                   variant="outline"
                   className="border-orange-500 text-orange-600 hover:bg-orange-50"
                   size="lg"

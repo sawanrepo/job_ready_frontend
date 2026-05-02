@@ -50,11 +50,22 @@ const ATSCheck = () => {
         title: "ATS analysis complete!",
         description: "Your resume has been analyzed successfully.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      const isCompatibilityError = error.message?.includes("not compatible with our ATS checker") || 
+                                  error.message?.includes("image-based") ||
+                                  error.message?.includes("No extractable text");
+      
+      const isTooLongError = error.message?.includes("too long") || 
+                            error.message?.includes("1 or 2 page");
+
       toast({
         variant: "destructive",
-        title: "Analysis failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        title: isCompatibilityError ? "Compatibility Issue" : isTooLongError ? "PDF Too Long" : "Analysis failed",
+        description: isCompatibilityError 
+          ? "The uploaded PDF is not compatible with our ATS checker. Either the uploaded PDF is image-based or doesn't have text that is valid for a general ATS check. Please use a text-based (Lex-based) resume for better results."
+          : isTooLongError
+          ? "PDF is too long to be a valid resume. Please upload a resume of 1 or 2 pages."
+          : (error instanceof Error ? error.message : "Something went wrong"),
       });
     } finally {
       setIsLoading(false);
