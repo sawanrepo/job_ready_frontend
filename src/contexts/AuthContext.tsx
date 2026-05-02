@@ -14,6 +14,8 @@ interface AuthContextType {
   register: (email: string, password: string, full_name: string) => Promise<boolean>;
   verifyOtp: (email: string, otp: string) => Promise<boolean>;
   resendOtp: (email: string) => Promise<boolean>;
+  forgotPassword: (email: string) => Promise<boolean>;
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<boolean>;
   googleLogin: (code: string) => Promise<boolean>;
   initiateGoogleLogin: () => void;
   logout: () => void;
@@ -227,6 +229,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const forgotPassword = async (email: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Reset Code Sent",
+          description: "If an account exists with that email, a code has been sent.",
+        });
+        return true;
+      } else {
+        const errorData = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Request failed",
+          description: errorData.detail || "Failed to send reset code",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Request failed",
+        description: "Network error. Please try again.",
+      });
+      return false;
+    }
+  };
+
+  const resetPassword = async (email: string, otp: string, new_password: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp, new_password }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Password Reset Successful",
+          description: "You can now log in with your new password.",
+        });
+        return true;
+      } else {
+        const errorData = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Reset failed",
+          description: errorData.detail || "Failed to reset password",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Reset failed",
+        description: "Network error. Please try again.",
+      });
+      return false;
+    }
+  };
+
   const googleLogin = async (code: string): Promise<boolean> => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/google-auth`, {
@@ -317,6 +389,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     verifyOtp,
     resendOtp,
+    forgotPassword,
+    resetPassword,
     googleLogin,
     initiateGoogleLogin,
     logout,
