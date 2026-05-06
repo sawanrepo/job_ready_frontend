@@ -64,20 +64,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const userData = localStorage.getItem('user_data');
-    
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData));
-        fetchMe(); // Async fetch to get the latest fresh data
-      } catch (error) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_data');
+    // Fix #11: await fetchMe before setting isLoading=false so protected routes
+    // never briefly render with a stale/expired token still in localStorage.
+    const init = async () => {
+      const token = localStorage.getItem('access_token');
+      const userData = localStorage.getItem('user_data');
+
+      if (token && userData) {
+        try {
+          setUser(JSON.parse(userData));  // optimistic local state
+          await fetchMe();               // reconcile with server (clears user on 401)
+        } catch (error) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user_data');
+          setUser(null);
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);  // only unblock UI after server truth is known
+    };
+    init();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
