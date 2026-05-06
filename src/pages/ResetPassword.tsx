@@ -42,11 +42,12 @@ const ResetPassword = () => {
       return;
     }
 
-    if (formData.newPassword.length < 6) {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,16}$/;
+    if (!passwordRegex.test(formData.newPassword)) {
       toast({
         variant: "destructive",
-        title: "Password too short",
-        description: "Your password must be at least 6 characters long.",
+        title: "Password doesn't meet requirements",
+        description: "Password must be 8-16 characters long and include uppercase, lowercase, number, and special character.",
       });
       return;
     }
@@ -116,7 +117,7 @@ const ResetPassword = () => {
                     <Input
                       type="password"
                       name="newPassword"
-                      placeholder="New Password"
+                      placeholder="New Password (8-16 chars, A-z, 0-9, !@#)"
                       value={formData.newPassword}
                       onChange={handleChange}
                       required

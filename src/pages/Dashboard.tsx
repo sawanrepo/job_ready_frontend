@@ -56,6 +56,13 @@ const Dashboard = () => {
               <span>Welcome, {user?.full_name}</span>
             </div>
             <Button
+              variant="ghost"
+              onClick={() => navigate('/settings')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Settings
+            </Button>
+            <Button
               variant="outline"
               onClick={logout}
               className="flex items-center space-x-2"

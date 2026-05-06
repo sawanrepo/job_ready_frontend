@@ -28,6 +28,13 @@ const Register = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,16}$/;
+    if (!passwordRegex.test(formData.password)) {
+      alert("Password must be 8-16 characters long and include uppercase, lowercase, number, and special character.");
       return;
     }
     
@@ -103,7 +110,7 @@ const Register = () => {
                   <Input
                     type="password"
                     name="password"
-                    placeholder="Password"
+                    placeholder="Password (8-16 chars, A-z, 0-9, !@#)"
                     value={formData.password}
                     onChange={handleChange}
                     required

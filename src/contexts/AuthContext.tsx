@@ -5,6 +5,7 @@ interface User {
   id: string;
   email: string;
   full_name: string;
+  is_google_oauth?: boolean;
 }
 
 interface AuthContextType {
@@ -16,6 +17,8 @@ interface AuthContextType {
   resendOtp: (email: string) => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<boolean>;
+  updateProfile: (fullName: string) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   googleLogin: (code: string) => Promise<boolean>;
   initiateGoogleLogin: () => void;
   logout: () => void;
@@ -30,6 +33,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchMe = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const userData = {
+          id: data.id.toString(),
+          email: data.email,
+          full_name: data.full_name,
+          is_google_oauth: data.is_google_oauth
+        };
+        localStorage.setItem('user_data', JSON.stringify(userData));
+        setUser(userData);
+      } else if (response.status === 401) {
+        // If unauthorized, token might be expired. logout.
+        logout();
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     const userData = localStorage.getItem('user_data');
@@ -37,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token && userData) {
       try {
         setUser(JSON.parse(userData));
+        fetchMe(); // Async fetch to get the latest fresh data
       } catch (error) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
@@ -67,8 +101,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Extract user info from the response
         const userData = {
-          id: data.user_id || '1',
-          email: email,
+          id: data.user_id.toString(),
+          email: data.email || email,
           full_name: data.full_name || 'User'
         };
         
@@ -161,8 +195,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         const userData = {
-          id: data.user_id || '1',
-          email: email,
+          id: data.user_id.toString(),
+          email: data.email || email,
           full_name: data.full_name || 'User'
         };
         
@@ -299,6 +333,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = async (fullName: string): Promise<boolean> => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return false;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ full_name: fullName }),
+      });
+
+      if (response.ok) {
+        await fetchMe();
+        toast({
+          title: "Profile Updated",
+          description: "Your profile has been updated successfully.",
+        });
+        return true;
+      } else {
+        const errorData = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Update failed",
+          description: errorData.detail || "Failed to update profile",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: "Network error. Please try again.",
+      });
+      return false;
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return false;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Password Changed",
+          description: "Your password has been changed successfully.",
+        });
+        return true;
+      } else {
+        const errorData = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Change failed",
+          description: errorData.detail || "Failed to change password",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Change failed",
+        description: "Network error. Please try again.",
+      });
+      return false;
+    }
+  };
+
   const googleLogin = async (code: string): Promise<boolean> => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/google-auth`, {
@@ -318,7 +431,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         const userData = {
-          id: data.user_id || '1',
+          id: data.user_id.toString(),
           email: data.email || 'user@gmail.com',
           full_name: data.full_name || 'User'
         };
@@ -391,6 +504,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resendOtp,
     forgotPassword,
     resetPassword,
+    updateProfile,
+    changePassword,
     googleLogin,
     initiateGoogleLogin,
     logout,
