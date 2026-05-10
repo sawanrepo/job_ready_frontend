@@ -24,6 +24,10 @@ import ResetPassword from "./pages/ResetPassword";
 
 import Settings from "./pages/Settings";
 
+import AudioInterviewSetup from "./pages/AudioInterviewSetup";
+import AudioInterviewSession from "./pages/AudioInterviewSession";
+import InterviewHistory from "./pages/InterviewHistory";
+
 const queryClient = new QueryClient();
 
 // Animated Background Component
@@ -134,6 +138,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <InterviewResults />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audio-interview"
+              element={
+                <ProtectedRoute>
+                  <AudioInterviewSetup />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audio-interview/session/:sessionId"
+              element={
+                <ProtectedRoute>
+                  <AudioInterviewSession />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/interview-history"
+              element={
+                <ProtectedRoute>
+                  <InterviewHistory />
                 </ProtectedRoute>
               }
             />

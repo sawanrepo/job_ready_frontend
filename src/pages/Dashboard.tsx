@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FileSearch, Zap, Download, LogOut, User, Video } from 'lucide-react';
+import { FileSearch, Zap, Download, LogOut, User, Video, Mic, History } from 'lucide-react';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -40,6 +40,22 @@ const Dashboard = () => {
       path: '/interview',
       color: 'text-red-600',
       bg: 'bg-red-50',
+    },
+    {
+      icon: Mic,
+      title: 'Rapid Fire Interview',
+      description: 'Quick 10-question audio-only AI interview',
+      path: '/audio-interview',
+      color: 'text-orange-600',
+      bg: 'bg-orange-50',
+    },
+    {
+      icon: History,
+      title: 'Interview History',
+      description: 'Review your latest interview performance',
+      path: '/interview-history',
+      color: 'text-teal-600',
+      bg: 'bg-teal-50',
     },
   ];
 

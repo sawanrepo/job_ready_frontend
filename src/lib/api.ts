@@ -28,6 +28,7 @@ export interface UsageResponse {
   ats_checks_left_today: number;
   resume_tailoring_left_this_week: number;
   mock_interviews_left_this_month: number;
+  audio_interviews_left_this_month: number;
   next_reset_times: {
     ats_check: string;
     resume_tailoring: string;

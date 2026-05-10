@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +14,21 @@ const InterviewResults: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const location = useLocation();
+
     useEffect(() => {
+        if (location.state?.resultData) {
+            setResult(location.state.resultData);
+            setLoading(false);
+            return;
+        }
+
         const fetchResult = async () => {
             try {
-                const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/result`);
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/result`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 if (!response.ok) throw new Error('Failed to fetch results');
                 const data = await response.json();
                 setResult(data);
@@ -29,7 +40,7 @@ const InterviewResults: React.FC = () => {
         };
 
         if (sessionId) fetchResult();
-    }, [sessionId]);
+    }, [sessionId, location.state]);
 
     if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin h-10 w-10" /></div>;
     if (error) return <div className="text-red-500 text-center p-10">Error: {error}</div>;
