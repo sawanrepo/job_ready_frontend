@@ -1,21 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { FileUpload } from '@/components/FileUpload';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, CreditCard } from 'lucide-react';
+import { ArrowLeft, Download, FileText, CreditCard, ExternalLink, Eye, Loader2 } from 'lucide-react';
 import { apiClient, TailorResumeResponse } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const TailorResume = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<TailorResumeResponse | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const { usage, isLoading: usageLoading, formatResetTime, triggerPaymentFlow, fetchUsage } = useUsage();
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,13 +56,26 @@ const TailorResume = () => {
     try {
       const response = await apiClient.tailorResume(selectedFile, jobDescription);
       setResult(response);
+      
+      // Generate preview URL
+      if (response.filename) {
+        try {
+          const blob = await apiClient.downloadResume(response.filename);
+          const url = URL.createObjectURL(blob);
+          setPreviewUrl(url);
+        } catch (error) {
+          console.error("Failed to generate preview URL:", error);
+        }
+      }
+
       // Refresh usage data after successful tailoring
       fetchUsage();
       toast({
         title: "Resume tailored successfully!",
-        description: "Your tailored resume is ready for download.",
+        description: "Your tailored resume is ready for preview and download.",
       });
     } catch (error: any) {
+
       const isCompatibilityError = error.message?.includes("not compatible with our ATS checker") || 
                                   error.message?.includes("image-based") ||
                                   error.message?.includes("No extractable text");
@@ -220,49 +246,108 @@ const TailorResume = () => {
 
         {/* Results */}
         {result && (
-          <div className="space-y-8">
-            {/* Download Section */}
-            <Card className="gradient-card border-0">
-              <CardHeader>
-                <CardTitle className="font-poppins text-2xl flex items-center">
-                  <FileText className="h-6 w-6 mr-2 text-primary" />
-                  Your Tailored Resume
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between p-6 bg-white/50 rounded-lg">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">{result.filename}</h3>
-                    <p className="text-muted-foreground">
-                      Your resume has been optimized for this specific job opportunity
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleDownload}
-                    className="gradient-primary hover:shadow-glow transition-all duration-300"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Resume
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Tabs defaultValue="preview" className="w-full">
+              <div className="flex items-center justify-between mb-4">
+                <TabsList className="bg-white/50 border border-primary/10">
+                  <TabsTrigger value="preview" className="flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Live Preview
+                  </TabsTrigger>
+                  <TabsTrigger value="overview" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Overview
+                  </TabsTrigger>
+                </TabsList>
 
-            {/* Preview Section */}
-            <Card className="gradient-card border-0">
-              <CardHeader>
-                <CardTitle className="font-poppins">Resume Preview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-white p-6 rounded-lg max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {result.tailored_resume}
-                  </pre>
-                </div>
-              </CardContent>
-            </Card>
+                <Button
+                  onClick={handleDownload}
+                  className="gradient-primary hover:shadow-glow transition-all duration-300"
+                  size="sm"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+              </div>
+
+              <TabsContent value="preview" className="mt-0">
+                <Card className="gradient-card border-0 overflow-hidden">
+                  <CardContent className="p-0">
+                    {previewUrl ? (
+                      <div className="aspect-[1/1.4] w-full bg-white">
+                        <iframe
+                          src={`${previewUrl}#toolbar=0&navpanes=0`}
+                          className="w-full h-full border-0"
+                          title="Resume Preview"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-96 flex flex-col items-center justify-center bg-white p-12 text-center">
+                        <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+                        <p className="text-muted-foreground">Preparing your preview...</p>
+                      </div>
+                    )}
+                  </CardContent>
+                  {previewUrl && (
+                    <div className="bg-white border-t p-3 flex justify-center">
+                      <a 
+                        href={previewUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline text-sm flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Open in New Tab
+                      </a>
+                    </div>
+                  )}
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="overview" className="mt-0">
+                <Card className="gradient-card border-0">
+                  <CardHeader>
+                    <CardTitle className="font-poppins text-2xl flex items-center">
+                      <FileText className="h-6 w-6 mr-2 text-primary" />
+                      Tailored Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-6 bg-white/50 rounded-lg">
+                        <div>
+                          <h3 className="text-lg font-semibold mb-2">{result.filename}</h3>
+                          <p className="text-muted-foreground">
+                            Your resume has been optimized for this specific job opportunity
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-6 rounded-lg border border-primary/10">
+                        <h4 className="font-semibold mb-4">Content Summary</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Name:</span>
+                            <span className="ml-2 font-medium">{result.tailored_content?.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Role:</span>
+                            <span className="ml-2 font-medium">{result.tailored_content?.tagline}</span>
+                          </div>
+                        </div>
+                        <div className="mt-4">
+                          <span className="text-muted-foreground">Summary:</span>
+                          <p className="mt-1 text-sm leading-relaxed">{result.tailored_content?.summary}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         )}
+
       </main>
     </div>
   );

@@ -19,10 +19,11 @@ export interface ATSCheckResponse {
 }
 
 export interface TailorResumeResponse {
-  tailored_resume: string;
+  tailored_content: any;
   filename: string;
-  download_url: string;
+  pdf_url: string;
 }
+
 
 export interface UsageResponse {
   ats_checks_left_today: number;
