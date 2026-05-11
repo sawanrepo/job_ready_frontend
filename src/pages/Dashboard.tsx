@@ -2,10 +2,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FileSearch, Zap, Download, LogOut, User, Video, Mic, History } from 'lucide-react';
+import { FileSearch, Zap, Download, Video, Mic, History } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const features = [
@@ -61,36 +62,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-secondary/30">
-      {/* Header */}
-      <header className="bg-white shadow-soft border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gradient font-poppins">Job Ready</h1>
-
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-muted-foreground">
-              <User className="h-4 w-4" />
-              <span>Welcome, {user?.full_name}</span>
-            </div>
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/settings')}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Settings
-            </Button>
-            <Button
-              variant="outline"
-              onClick={logout}
-              className="flex items-center space-x-2"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
+
       <main className="max-w-6xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold mb-4 font-poppins">

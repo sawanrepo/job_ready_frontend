@@ -9,6 +9,8 @@ import { ArrowLeft, CreditCard } from 'lucide-react';
 import { apiClient, ATSCheckResponse } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
+import Navbar from '@/components/Navbar';
+
 
 const ATSCheck = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -78,17 +80,10 @@ const ATSCheck = () => {
 
   return (
     <div className="min-h-screen bg-secondary/30">
-      <header className="bg-white shadow-soft border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mr-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <h1 className="text-2xl font-bold text-gradient font-poppins">ATS Resume Check</h1>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="max-w-6xl mx-auto px-4 py-12">
+
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4 font-poppins">
             Analyze Your Resume
@@ -170,14 +165,15 @@ const ATSCheck = () => {
               </Button>
               <div>
                 <Button
-                  onClick={() => triggerPaymentFlow('one_time')}
+                  onClick={() => navigate('/shop')}
                   variant="outline"
                   className="border-orange-500 text-orange-600 hover:bg-orange-50"
                   size="lg"
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
-                  Pay ₹20 to get 1 extra check
+                  Buy More Checks in Shop
                 </Button>
+
               </div>
             </div>
           ) : (

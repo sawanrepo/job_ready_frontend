@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { FeatureCard } from '@/components/FeatureCard';
 import { useNavigate } from 'react-router-dom';
-import { FileSearch, Zap, HelpCircle, ArrowRight, Info } from 'lucide-react';
+import { FileSearch, Zap, HelpCircle, ArrowRight, Info, ShoppingBag } from 'lucide-react';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -23,11 +23,20 @@ const Landing = () => {
             </Button>
             <Button 
               variant="ghost" 
+              onClick={() => navigate('/shop')}
+              className="text-white hover:bg-white/10"
+            >
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              Shop
+            </Button>
+            <Button 
+              variant="ghost" 
               onClick={() => navigate('/faq')}
               className="text-white hover:bg-white/10"
             >
               FAQ
             </Button>
+
           </div>
         </div>
       </nav>

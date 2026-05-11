@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, CheckCircle, AlertCircle, Video, Mic, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import Navbar from '@/components/Navbar';
+
 
 const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
 
@@ -70,8 +72,9 @@ const InterviewHistory: React.FC = () => {
     const noHistory = !history?.audio && !history?.video;
 
     return (
-        <div className="min-h-screen bg-secondary/30 py-10">
-            <div className="container mx-auto max-w-6xl space-y-8">
+        <div className="min-h-screen bg-secondary/30">
+            <Navbar />
+            <div className="container mx-auto max-w-6xl space-y-8 py-10">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-4xl font-bold font-poppins text-gradient">Interview History</h1>
@@ -79,10 +82,8 @@ const InterviewHistory: React.FC = () => {
                             Review your latest performance
                         </p>
                     </div>
-                    <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                        Back to Dashboard
-                    </Button>
                 </div>
+
 
                 {noHistory ? (
                     <Card className="p-16 text-center border-dashed border-2 bg-transparent shadow-none">

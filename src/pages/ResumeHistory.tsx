@@ -8,7 +8,10 @@ import { ATSResultDisplay } from '@/components/ATSResultDisplay';
 import { apiClient } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
+import Navbar from '@/components/Navbar';
+
 const RESUME_API_URL = `${import.meta.env.VITE_API_URL}/resume`;
+
 
 interface ATSResultData {
     ats_score: number;
@@ -117,8 +120,9 @@ const ResumeHistory: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-secondary/30 py-10">
-            <div className="container mx-auto max-w-6xl space-y-8">
+        <div className="min-h-screen bg-secondary/30">
+            <Navbar />
+            <div className="container mx-auto max-w-6xl space-y-8 py-10">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-4xl font-bold font-poppins text-gradient">Resume History</h1>
@@ -126,10 +130,8 @@ const ResumeHistory: React.FC = () => {
                             Access your latest resume analysis and tailored files
                         </p>
                     </div>
-                    <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                        Back to Dashboard
-                    </Button>
                 </div>
+
 
                 {noHistory ? (
                     <Card className="p-16 text-center border-dashed border-2 bg-transparent shadow-none">

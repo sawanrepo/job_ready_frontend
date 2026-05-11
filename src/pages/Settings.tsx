@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Lock, Mail, Save, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+
 
 const Settings = () => {
   const { user, updateProfile, changePassword } = useAuth();
@@ -59,23 +61,10 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-secondary/30">
-      <header className="bg-white border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => navigate('/dashboard')}
-              className="text-muted-foreground hover:bg-black/5 rounded-full"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <span className="font-poppins font-semibold text-lg text-foreground">Settings</span>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <div className="container mx-auto px-4 pt-12 pb-12 max-w-4xl">
+
         <div className="mb-8 text-center sm:text-left">
           <h1 className="text-4xl font-bold text-foreground mb-2 font-poppins">Account Settings</h1>
           <p className="text-muted-foreground">Manage your profile and security preferences</p>

@@ -8,6 +8,8 @@ import { ArrowLeft, CreditCard, Loader2 } from 'lucide-react';
 import { FileUpload } from '@/components/FileUpload';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
+import Navbar from '@/components/Navbar';
+
 
 const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
 
@@ -39,7 +41,7 @@ const InterviewSetup: React.FC = () => {
             return;
         }
 
-        if (usage && usage.mock_interviews_left_this_month === 0) {
+        if (usage && usage.mock_interviews_left === 0) {
             toast({
                 variant: "destructive",
                 title: "No mocks remaining",
@@ -47,6 +49,7 @@ const InterviewSetup: React.FC = () => {
             });
             return;
         }
+
 
         setIsLoading(true);
         try {
@@ -94,22 +97,16 @@ const InterviewSetup: React.FC = () => {
         }
     };
 
-    const canStartInterview = usage && usage.mock_interviews_left_this_month > 0;
+    const canStartInterview = usage && (usage.mock_interviews_left || 0) > 0;
+
     const hasUsageData = usage && !usageLoading;
 
     return (
         <div className="min-h-screen bg-secondary/30">
-            <header className="bg-white shadow-soft border-b">
-                <div className="max-w-6xl mx-auto px-4 py-4 flex items-center">
-                    <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mr-4">
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back to Dashboard
-                    </Button>
-                    <h1 className="text-2xl font-bold text-gradient font-poppins">Mock Interview Setup</h1>
-                </div>
-            </header>
 
+            <Navbar />
             <main className="max-w-4xl mx-auto px-4 py-12">
+
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold mb-4 font-poppins">
                         Practice with AI
@@ -124,15 +121,13 @@ const InterviewSetup: React.FC = () => {
                             <div className="flex items-center justify-center gap-6 text-sm">
                                 <div className="flex items-center gap-2">
                                     <span className="font-medium">
-                                        {usage.mock_interviews_left_this_month} mocks left this month
+                                        {usage.mock_interviews_left} mocks left
                                     </span>
-                                </div>
-                                <div className="text-muted-foreground">
-                                    Next reset: {formatResetTime(usage.next_reset_times.mock_interview)}
                                 </div>
                             </div>
                         </div>
                     )}
+
                 </div>
 
                 <div className="grid lg:grid-cols-2 gap-8 mb-8">
@@ -184,15 +179,16 @@ const InterviewSetup: React.FC = () => {
                             </Button>
                             <div>
                                 <Button
-                                    onClick={() => triggerPaymentFlow('mock_interview_one_time')}
+                                    onClick={() => navigate('/shop')}
                                     variant="outline"
                                     className="border-orange-500 text-orange-600 hover:bg-orange-50"
                                     size="lg"
                                 >
                                     <CreditCard className="h-4 w-4 mr-2" />
-                                    Pay ₹50 to get 1 extra mock interview
+                                    Buy More Mock Interviews in Shop
                                 </Button>
                             </div>
+
                         </div>
                     ) : (
                         <Button

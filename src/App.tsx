@@ -28,6 +28,8 @@ import AudioInterviewSetup from "./pages/AudioInterviewSetup";
 import AudioInterviewSession from "./pages/AudioInterviewSession";
 import InterviewHistory from "./pages/InterviewHistory";
 import ResumeHistory from "./pages/ResumeHistory";
+import Shop from "./pages/Shop";
+
 
 const queryClient = new QueryClient();
 
@@ -110,6 +112,15 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/shop"
+              element={
+                <ProtectedRoute>
+                  <Shop />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/ats-check"
               element={

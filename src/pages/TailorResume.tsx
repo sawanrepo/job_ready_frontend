@@ -9,6 +9,8 @@ import { apiClient, TailorResumeResponse } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Navbar from '@/components/Navbar';
+
 
 
 const TailorResume = () => {
@@ -130,17 +132,10 @@ const TailorResume = () => {
 
   return (
     <div className="min-h-screen bg-secondary/30">
-      <header className="bg-white shadow-soft border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mr-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <h1 className="text-2xl font-bold text-gradient font-poppins">Resume Tailoring</h1>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="max-w-6xl mx-auto px-4 py-12">
+
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4 font-poppins">
             Tailor Your Resume
@@ -222,14 +217,15 @@ const TailorResume = () => {
               </Button>
               <div>
                 <Button
-                  onClick={() => triggerPaymentFlow('one_time')}
+                  onClick={() => navigate('/shop')}
                   variant="outline"
                   className="border-orange-500 text-orange-600 hover:bg-orange-50"
                   size="lg"
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
-                  Pay ₹20 to get 1 extra tailoring
+                  Buy More Tailorings in Shop
                 </Button>
+
               </div>
             </div>
           ) : (

@@ -7,6 +7,8 @@ import { ArrowLeft, CreditCard } from 'lucide-react';
 import { FileUpload } from '@/components/FileUpload';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
+import Navbar from '@/components/Navbar';
+
 
 const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview/audio`;
 
@@ -38,7 +40,7 @@ const AudioInterviewSetup: React.FC = () => {
             return;
         }
 
-        if (usage && usage.audio_interviews_left_this_month === 0) {
+        if (usage && usage.audio_interviews_left === 0) {
             toast({
                 variant: "destructive",
                 title: "No audio interviews remaining",
@@ -46,6 +48,7 @@ const AudioInterviewSetup: React.FC = () => {
             });
             return;
         }
+
 
         setIsLoading(true);
         try {
@@ -82,22 +85,16 @@ const AudioInterviewSetup: React.FC = () => {
         }
     };
 
-    const canStartInterview = usage && usage.audio_interviews_left_this_month > 0;
+    const canStartInterview = usage && (usage.audio_interviews_left || 0) > 0;
+
     const hasUsageData = usage && !usageLoading;
 
     return (
         <div className="min-h-screen bg-secondary/30">
-            <header className="bg-white shadow-soft border-b">
-                <div className="max-w-6xl mx-auto px-4 py-4 flex items-center">
-                    <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mr-4">
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back to Dashboard
-                    </Button>
-                    <h1 className="text-2xl font-bold text-gradient font-poppins">Rapid Fire Audio Setup</h1>
-                </div>
-            </header>
 
+            <Navbar />
             <main className="max-w-4xl mx-auto px-4 py-12">
+
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold mb-4 font-poppins">
                         Rapid Fire Interview
@@ -112,12 +109,13 @@ const AudioInterviewSetup: React.FC = () => {
                             <div className="flex items-center justify-center gap-6 text-sm">
                                 <div className="flex items-center gap-2">
                                     <span className="font-medium">
-                                        {usage.audio_interviews_left_this_month} audio interviews left
+                                        {usage.audio_interviews_left} audio interviews left
                                     </span>
                                 </div>
                             </div>
                         </div>
                     )}
+
                 </div>
 
                 <div className="grid lg:grid-cols-2 gap-8 mb-8">
@@ -169,15 +167,16 @@ const AudioInterviewSetup: React.FC = () => {
                             </Button>
                             <div>
                                 <Button
-                                    onClick={() => triggerPaymentFlow('audio_interview_one_time')}
+                                    onClick={() => navigate('/shop')}
                                     variant="outline"
                                     className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                     size="lg"
                                 >
                                     <CreditCard className="h-4 w-4 mr-2" />
-                                    Pay ₹20 to unlock 1 Audio Interview
+                                    Buy More Interviews in Shop
                                 </Button>
                             </div>
+
                         </div>
                     ) : (
                         <Button

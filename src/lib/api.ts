@@ -30,14 +30,14 @@ export interface UsageResponse {
   resume_tailoring_left_this_week: number;
   purchased_ats_credits: number;
   purchased_tailor_credits: number;
-  mock_interviews_left_this_month: number;
-  audio_interviews_left_this_month: number;
+  mock_interviews_left: number;
+  audio_interviews_left: number;
   next_reset_times: {
     ats_check: string;
     resume_tailoring: string;
-    mock_interview: string;
   };
 }
+
 
 export const apiClient = {
   async atsCheck(resumeFile: File, jobDescription: string): Promise<ATSCheckResponse> {
