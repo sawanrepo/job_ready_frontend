@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ const InterviewResults: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     const location = useLocation();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (location.state?.resultData) {
@@ -48,6 +50,11 @@ const InterviewResults: React.FC = () => {
 
     return (
         <div className="container mx-auto py-10 max-w-4xl space-y-8">
+            <div className="flex justify-start">
+                <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                    Back to Dashboard
+                </Button>
+            </div>
             <div className="text-center space-y-4">
                 <h1 className="text-4xl font-bold">Interview Evaluation</h1>
                 <p className="text-xl text-muted-foreground">

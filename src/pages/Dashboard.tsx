@@ -27,9 +27,9 @@ const Dashboard = () => {
     },
     {
       icon: Download,
-      title: 'Download History',
-      description: 'Access your previously tailored resumes',
-      path: '/downloads',
+      title: 'Resume History',
+      description: 'Access your latest ATS check and tailored resume',
+      path: '/resume-history',
       color: 'text-green-600',
       bg: 'bg-green-50',
     },

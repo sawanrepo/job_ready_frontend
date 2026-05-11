@@ -21,9 +21,12 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
+    const [currentBlob, setCurrentBlob] = useState<Blob | null>(null);
+    const [allAnswersBlobs, setAllAnswersBlobs] = useState<Blob[]>([]);
     
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const audioChunksRef = useRef<BlobPart[]>([]);
+    const currentChunksRef = useRef<BlobPart[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
 
     useEffect(() => {
@@ -54,8 +57,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
             }
+            if (currentAudioUrl) {
+                URL.revokeObjectURL(currentAudioUrl);
+            }
         };
-    }, [initialData, navigate, questions.length]);
+    }, [initialData, navigate, questions.length, currentAudioUrl]);
 
     const startRecording = () => {
         if (!streamRef.current) {
@@ -63,65 +69,65 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             return;
         }
 
-        if (!mediaRecorderRef.current) {
-            const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm' });
-            mediaRecorderRef.current = mediaRecorder;
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
-            };
+        if (currentAudioUrl) {
+            URL.revokeObjectURL(currentAudioUrl);
+            setCurrentAudioUrl(null);
+            setCurrentBlob(null);
         }
 
-        if (mediaRecorderRef.current.state === "inactive") {
-            mediaRecorderRef.current.start();
-        } else if (mediaRecorderRef.current.state === "paused") {
-            mediaRecorderRef.current.resume();
-        }
+        currentChunksRef.current = [];
+        const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm' });
+        mediaRecorderRef.current = mediaRecorder;
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                currentChunksRef.current.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(currentChunksRef.current, { type: 'audio/webm' });
+            const url = URL.createObjectURL(blob);
+            setCurrentBlob(blob);
+            setCurrentAudioUrl(url);
+            setIsRecording(false);
+        };
+
+        mediaRecorder.start();
         setIsRecording(true);
     };
 
-    const pauseRecording = () => {
+    const stopRecording = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            mediaRecorderRef.current.pause();
-            setIsRecording(false);
+            mediaRecorderRef.current.stop();
         }
-    };
-
-    const finalizeRecording = () => {
-        return new Promise<void>((resolve) => {
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-                mediaRecorderRef.current.onstop = () => {
-                    setIsRecording(false);
-                    resolve();
-                };
-                mediaRecorderRef.current.stop();
-            } else {
-                resolve();
-            }
-        });
     };
 
     const handleNextQuestion = async () => {
-        if (isRecording) {
-            pauseRecording();
-        }
+        if (!currentBlob) return;
+
+        const updatedBlobs = [...allAnswersBlobs];
+        updatedBlobs[currentQuestionIndex] = currentBlob;
+        setAllAnswersBlobs(updatedBlobs);
 
         if (currentQuestionIndex < totalQuestions - 1) {
             setCurrentQuestionIndex(prev => prev + 1);
+            setCurrentAudioUrl(null);
+            setCurrentBlob(null);
+            currentChunksRef.current = [];
         } else {
-            await finalizeRecording();
-            await submitInterview();
+            await submitInterview(updatedBlobs);
         }
     };
 
-    const submitInterview = async () => {
+    const submitInterview = async (finalBlobs: Blob[]) => {
         setIsProcessing(true);
         try {
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            // Concatenate all blobs into one final webm
+            const mergedBlob = new Blob(finalBlobs, { type: 'audio/webm' });
             
             const formData = new FormData();
-            formData.append('audio', audioBlob, `session_${sessionId}.webm`);
+            formData.append('audio', mergedBlob, `session_${sessionId}.webm`);
 
             const token = localStorage.getItem('access_token');
             const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/result`, {
@@ -189,32 +195,45 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                             </div>
 
                             <div className="flex flex-col items-center justify-center space-y-8">
-                                <div className={`relative flex items-center justify-center w-32 h-32 rounded-full border-4 transition-all duration-300 ${isRecording ? 'border-red-500 bg-red-50' : 'border-primary bg-primary/5'}`}>
+                                <div className={`relative flex items-center justify-center w-32 h-32 rounded-full border-4 transition-all duration-300 ${isRecording ? 'border-red-500 bg-red-50' : currentAudioUrl ? 'border-green-500 bg-green-50' : 'border-primary bg-primary/5'}`}>
                                     {isRecording && (
                                         <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping"></div>
                                     )}
-                                    <Mic className={`w-12 h-12 ${isRecording ? 'text-red-500' : 'text-primary'}`} />
+                                    {currentAudioUrl && !isRecording ? (
+                                        <CheckCircle2 className="w-12 h-12 text-green-500" />
+                                    ) : (
+                                        <Mic className={`w-12 h-12 ${isRecording ? 'text-red-500' : 'text-primary'}`} />
+                                    )}
                                 </div>
+
+                                {currentAudioUrl && !isRecording && (
+                                    <div className="w-full max-w-sm space-y-4">
+                                        <div className="flex flex-col items-center space-y-2">
+                                            <p className="text-sm font-medium text-muted-foreground">Review your answer:</p>
+                                            <audio controls src={currentAudioUrl} className="w-full h-10" />
+                                        </div>
+                                    </div>
+                                )}
                                 
                                 <div className="flex gap-4">
                                     {!isRecording ? (
                                         <Button 
                                             size="lg" 
                                             onClick={startRecording}
-                                            className="gradient-primary px-8"
+                                            className={`${currentAudioUrl ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'gradient-primary'} px-8`}
                                         >
                                             <Mic className="w-4 h-4 mr-2" />
-                                            Start Answering
+                                            {currentAudioUrl ? 'Retake Answer' : 'Start Answering'}
                                         </Button>
                                     ) : (
                                         <Button 
                                             size="lg" 
                                             variant="destructive"
-                                            onClick={pauseRecording}
+                                            onClick={stopRecording}
                                             className="px-8 shadow-glow-sm"
                                         >
                                             <Square className="w-4 h-4 mr-2" />
-                                            Pause Recording
+                                            Stop Recording
                                         </Button>
                                     )}
                                 </div>
@@ -224,8 +243,8 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                                         size="lg"
                                         variant="outline"
                                         onClick={handleNextQuestion}
-                                        disabled={isRecording}
-                                        className="w-full md:w-auto min-w-[200px]"
+                                        disabled={isRecording || !currentAudioUrl}
+                                        className="w-full md:w-auto min-w-[200px] border-primary text-primary hover:bg-primary/5"
                                     >
                                         {isLastQuestion ? (
                                             <>

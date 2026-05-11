@@ -129,7 +129,12 @@ const TailorResume = () => {
               <div className="flex items-center justify-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
-                    {usage.resume_tailoring_left_this_week} tailorings left this week
+                    {usage.resume_tailoring_left_this_week} tailorings available
+                    {usage.purchased_tailor_credits > 0 && (
+                      <span className="text-xs text-primary ml-2">
+                        ({usage.resume_tailoring_left_this_week - usage.purchased_tailor_credits} free + {usage.purchased_tailor_credits} purchased)
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="text-muted-foreground">

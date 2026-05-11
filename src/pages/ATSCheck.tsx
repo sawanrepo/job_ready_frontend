@@ -103,7 +103,12 @@ const ATSCheck = () => {
               <div className="flex items-center justify-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
-                    {usage.ats_checks_left_today} checks left today
+                    {usage.ats_checks_left_today} checks available
+                    {usage.purchased_ats_credits > 0 && (
+                      <span className="text-xs text-primary ml-2">
+                        ({usage.ats_checks_left_today - usage.purchased_ats_credits} free + {usage.purchased_ats_credits} purchased)
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="text-muted-foreground">

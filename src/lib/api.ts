@@ -27,6 +27,8 @@ export interface TailorResumeResponse {
 export interface UsageResponse {
   ats_checks_left_today: number;
   resume_tailoring_left_this_week: number;
+  purchased_ats_credits: number;
+  purchased_tailor_credits: number;
   mock_interviews_left_this_month: number;
   audio_interviews_left_this_month: number;
   next_reset_times: {

@@ -27,6 +27,7 @@ import Settings from "./pages/Settings";
 import AudioInterviewSetup from "./pages/AudioInterviewSetup";
 import AudioInterviewSession from "./pages/AudioInterviewSession";
 import InterviewHistory from "./pages/InterviewHistory";
+import ResumeHistory from "./pages/ResumeHistory";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,14 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/about" element={<About />} />
+            <Route
+              path="/resume-history"
+              element={
+                <ProtectedRoute>
+                  <ResumeHistory />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={
