@@ -10,6 +10,8 @@ import { apiClient, ATSCheckResponse } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
 import Navbar from '@/components/Navbar';
+import { validateJobDescription } from '@/utils/validation';
+
 
 
 const ATSCheck = () => {
@@ -19,18 +21,31 @@ const ATSCheck = () => {
   const [result, setResult] = useState<ATSCheckResponse | null>(null);
   const navigate = useNavigate();
   const { usage, isLoading: usageLoading, formatResetTime, triggerPaymentFlow, fetchUsage } = useUsage();
+  
+  const validation = validateJobDescription(jobDescription);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedFile || !jobDescription.trim()) {
+    if (!selectedFile) {
       toast({
         variant: "destructive",
-        title: "Missing information",
-        description: "Please upload a resume and provide a job description.",
+        title: "Missing Resume",
+        description: "Please upload your resume.",
       });
       return;
     }
+
+    if (!validation.isValid) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Job Description",
+        description: validation.error,
+      });
+      return;
+    }
+
 
     if (usage && usage.ats_checks_left_today === 0) {
       toast({
@@ -134,12 +149,25 @@ const ATSCheck = () => {
               <CardTitle className="font-poppins">Job Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea
-                placeholder="Paste the job description here..."
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                className="min-h-[200px] resize-none"
-              />
+              <div className="relative">
+                <Textarea
+                  placeholder="Paste the job description here..."
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  className={`min-h-[200px] resize-none ${!validation.isValid && jobDescription.length > 0 ? 'border-destructive' : ''}`}
+                />
+                <div className="absolute bottom-3 right-3 text-xs font-medium bg-white/80 px-2 py-1 rounded border">
+                  <span className={!validation.isValid && jobDescription.length > 0 ? 'text-destructive' : 'text-muted-foreground'}>
+                    Words: {validation.wordCount} {validation.isValid ? '' : '/ min 30'}
+                  </span>
+                </div>
+              </div>
+              {!validation.isValid && jobDescription.length > 0 && (
+                <p className="text-xs text-destructive mt-2 ml-1">
+                  {validation.error}
+                </p>
+              )}
+
             </CardContent>
           </Card>
         </div>
@@ -148,7 +176,8 @@ const ATSCheck = () => {
           {hasUsageData && canRunAnalysis ? (
             <Button
               onClick={handleSubmit}
-              disabled={isLoading || !selectedFile || !jobDescription.trim()}
+              disabled={isLoading || !selectedFile || !validation.isValid}
+
               className="gradient-primary hover:shadow-glow transition-all duration-300 px-8 py-3"
               size="lg"
             >

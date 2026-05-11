@@ -9,6 +9,8 @@ import { FileUpload } from '@/components/FileUpload';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
 import Navbar from '@/components/Navbar';
+import { validateJobDescription } from '@/utils/validation';
+
 
 
 const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
@@ -19,6 +21,9 @@ const InterviewSetup: React.FC = () => {
     const [jobDescription, setJobDescription] = useState('');
     const navigate = useNavigate();
     const { usage, isLoading: usageLoading, formatResetTime, triggerPaymentFlow, fetchUsage } = useUsage();
+    
+    const validation = validateJobDescription(jobDescription);
+
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,14 +37,15 @@ const InterviewSetup: React.FC = () => {
             return;
         }
 
-        if (!jobDescription.trim()) {
+        if (!validation.isValid) {
             toast({
                 variant: "destructive",
-                title: "Job description missing",
-                description: "Please provide a job description.",
+                title: "Invalid Job Description",
+                description: validation.error,
             });
             return;
         }
+
 
         if (usage && usage.mock_interviews_left === 0) {
             toast({
@@ -148,12 +154,25 @@ const InterviewSetup: React.FC = () => {
                             <CardTitle className="font-poppins">Step 2: Job Description</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <Textarea
-                                placeholder="Paste the job description here..."
-                                value={jobDescription}
-                                onChange={(e) => setJobDescription(e.target.value)}
-                                className="min-h-[200px] resize-none"
-                            />
+                            <div className="relative">
+                                <Textarea
+                                    placeholder="Paste the job description here..."
+                                    value={jobDescription}
+                                    onChange={(e) => setJobDescription(e.target.value)}
+                                    className={`min-h-[200px] resize-none ${!validation.isValid && jobDescription.length > 0 ? 'border-destructive' : ''}`}
+                                />
+                                <div className="absolute bottom-3 right-3 text-xs font-medium bg-white/80 px-2 py-1 rounded border">
+                                    <span className={!validation.isValid && jobDescription.length > 0 ? 'text-destructive' : 'text-muted-foreground'}>
+                                        Words: {validation.wordCount} {validation.isValid ? '' : '/ min 30'}
+                                    </span>
+                                </div>
+                            </div>
+                            {!validation.isValid && jobDescription.length > 0 && (
+                                <p className="text-xs text-destructive mt-2 ml-1">
+                                    {validation.error}
+                                </p>
+                            )}
+
                         </CardContent>
                     </Card>
                 </div>
@@ -162,7 +181,8 @@ const InterviewSetup: React.FC = () => {
                     {hasUsageData && canStartInterview ? (
                         <Button
                             onClick={onSubmit}
-                            disabled={isLoading || !selectedFile || !jobDescription.trim()}
+                            disabled={isLoading || !selectedFile || !validation.isValid}
+
                             className="gradient-primary hover:shadow-glow transition-all duration-300 px-8 py-3"
                             size="lg"
                         >
