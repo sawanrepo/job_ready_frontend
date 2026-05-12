@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { FeatureCard } from '@/components/FeatureCard';
 import { useNavigate } from 'react-router-dom';
 import { FileSearch, Zap, HelpCircle, ArrowRight, Info, ShoppingBag } from 'lucide-react';
+import Footer from '@/components/Footer';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -140,6 +141,7 @@ const Landing = () => {
           </Button>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };

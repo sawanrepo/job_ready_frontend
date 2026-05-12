@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { FileSearch, Zap, Download, Video, Mic, History } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -128,6 +129,7 @@ const Dashboard = () => {
           </Card>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

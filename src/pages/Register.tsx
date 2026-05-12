@@ -12,6 +12,7 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    agreeToTerms: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { register, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -27,6 +28,11 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.agreeToTerms) {
+      alert("Please agree to the Terms and Conditions to continue.");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match");
       return;
@@ -52,7 +58,7 @@ const Register = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
     });
   };
 
@@ -132,6 +138,24 @@ const Register = () => {
                     className="pl-10 h-12"
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center space-x-2 py-2">
+                <input
+                  type="checkbox"
+                  id="agreeToTerms"
+                  name="agreeToTerms"
+                  checked={formData.agreeToTerms}
+                  onChange={handleChange as any}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  required
+                />
+                <label htmlFor="agreeToTerms" className="text-sm text-white/90">
+                  I agree to the{' '}
+                  <Link to="/terms" target="_blank" className="text-white font-bold hover:underline">
+                    Terms and Conditions
+                  </Link>
+                </label>
               </div>
               
               <Button 

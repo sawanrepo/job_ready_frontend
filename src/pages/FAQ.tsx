@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, HelpCircle, Shield, Zap, FileText, Users, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -172,6 +174,7 @@ const FAQ = () => {
           </Card>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

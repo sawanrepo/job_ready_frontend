@@ -222,14 +222,21 @@ const InterviewSession: React.FC = () => {
                         )}
 
                         {videoUrl && (
-                            <div className="flex gap-2 w-full">
-                                <Button onClick={startRecording} variant="outline" className="flex-1">
-                                    Retake
-                                </Button>
-                                <Button onClick={submitResponse} disabled={isProcessing} className="flex-1">
-                                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                                    Submit
-                                </Button>
+                            <div className="flex flex-col w-full">
+                                <div className="flex gap-2 w-full">
+                                    <Button onClick={startRecording} variant="outline" className="flex-1">
+                                        Retake
+                                    </Button>
+                                    <Button onClick={submitResponse} disabled={isProcessing} className="flex-1">
+                                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                        Submit
+                                    </Button>
+                                </div>
+                                {isProcessing && (
+                                    <p className="text-sm text-muted-foreground text-center mt-2 animate-pulse font-medium">
+                                        your answer is being evaluated this may take upto a min or 2 . please wait .
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
