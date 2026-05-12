@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +20,27 @@ const AudioInterviewSetup: React.FC = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [jobDescription, setJobDescription] = useState('');
     const navigate = useNavigate();
+    const [activeSessions, setActiveSessions] = useState<any[]>([]);
+    
+    useEffect(() => {
+        fetchActiveSessions();
+    }, []);
+
+    const fetchActiveSessions = async () => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/active-sessions`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setActiveSessions(data.filter((s: any) => s.type === 'audio'));
+            }
+        } catch (err) {
+            console.error("Failed to fetch active sessions", err);
+        }
+    };
+
     const { usage, isLoading: usageLoading, triggerPaymentFlow, fetchUsage } = useUsage();
     
     const validation = validateJobDescription(jobDescription);
@@ -123,6 +145,24 @@ const AudioInterviewSetup: React.FC = () => {
                     )}
 
                 </div>
+                
+                {activeSessions.length > 0 && (
+                    <Card className="mb-12 border-blue-300 bg-blue-50 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-6">
+                            <div>
+                                <CardTitle className="text-xl font-poppins text-blue-700">Resume Rapid Fire Interview?</CardTitle>
+                                <p className="text-sm text-blue-600">You have an unfinished session from {new Date(activeSessions[0].created_at).toLocaleString()}</p>
+                            </div>
+                            <Button 
+                                onClick={() => navigate(`/audio-interview/session/${activeSessions[0].id}`)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                                Resume Interview
+                            </Button>
+                        </CardHeader>
+                    </Card>
+                )}
+
 
                 <div className="grid lg:grid-cols-2 gap-8 mb-8">
                     <Card className="gradient-card border-0">

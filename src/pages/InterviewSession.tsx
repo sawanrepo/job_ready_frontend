@@ -24,7 +24,7 @@ const InterviewSession: React.FC = () => {
     const streamRef = useRef<MediaStream | null>(null);
     const chunksRef = useRef<Blob[]>([]);
 
-    // Initialize Camera
+    // Initialize Camera & Fetch Session if missing
     useEffect(() => {
         const startCamera = async () => {
             try {
@@ -38,46 +38,121 @@ const InterviewSession: React.FC = () => {
                 alert("Camera/Microphone access is required for the interview.");
             }
         };
+
+        const fetchSession = async () => {
+            if (questionData) return; // Already have data
+
+            try {
+                const token = localStorage.getItem('access_token');
+                // We need an endpoint to get current session status
+                const response = await fetch(`${INTERVIEW_API_URL}/session/${sessionId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error("Session not found");
+                
+                const data = await response.json();
+                setQuestionData(data);
+            } catch (err) {
+                console.error("Failed to fetch session:", err);
+                alert("Failed to resume interview session.");
+                navigate('/interview/setup');
+            }
+        };
+
         startCamera();
+        fetchSession();
 
         return () => {
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
             }
         };
-    }, []);
+    }, [sessionId, questionData, navigate]);
 
-    const startRecording = () => {
-        if (!streamRef.current) return;
 
-        chunksRef.current = [];
-        setVideoUrl(null);
-
-        const mediaRecorder = new MediaRecorder(streamRef.current);
-        mediaRecorderRef.current = mediaRecorder;
-
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                chunksRef.current.push(event.data);
+    const ensureStream = async () => {
+        if (streamRef.current && streamRef.current.getTracks().every(t => t.readyState === 'live')) {
+            return streamRef.current;
+        }
+        
+        // Re-initialize if stream is dead or tracks stopped
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            streamRef.current = stream;
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
             }
-        };
-
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            setVideoUrl(url);
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
+            return stream;
+        } catch (err) {
+            console.error("Failed to re-initialize camera:", err);
+            toast({
+                variant: "destructive",
+                title: "Camera Error",
+                description: "Could not access camera for retake. Please check permissions."
+            });
+            return null;
+        }
     };
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
+    const startRecording = async () => {
+        // 1. Immediate UI feedback
+        setIsRecording(true);
+        setVideoUrl(null);
+        chunksRef.current = [];
+
+        try {
+            const stream = await ensureStream();
+            if (!stream) {
+                setIsRecording(false);
+                return;
+            }
+
+            // Detect supported MIME type
+            let mimeType = 'video/webm;codecs=vp9';
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                mimeType = 'video/webm;codecs=vp9';
+            } else if (MediaRecorder.isTypeSupported('video/webm')) {
+                mimeType = 'video/webm';
+            } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+                mimeType = 'video/mp4';
+            }
+
+            const mediaRecorder = new MediaRecorder(stream, { mimeType });
+            mediaRecorderRef.current = mediaRecorder;
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    chunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunksRef.current, { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                setVideoUrl(url);
+                setIsRecording(false);
+            };
+
+            mediaRecorder.start(200); // Collect data periodically for better stability
+        } catch (err) {
+            console.error("MediaRecorder start failed:", err);
+            toast({
+                variant: "destructive",
+                title: "Recording Failed",
+                description: "Could not start the camera recorder. Please refresh and try again."
+            });
             setIsRecording(false);
         }
     };
+
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            mediaRecorderRef.current.stop();
+        }
+    };
+
 
     const submitResponse = async () => {
         if (chunksRef.current.length === 0 || !sessionId) return;
@@ -88,10 +163,15 @@ const InterviewSession: React.FC = () => {
         formData.append('video', blob, 'response.webm');
 
         try {
+            const token = localStorage.getItem('access_token');
             const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/response`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
                 body: formData,
             });
+
 
             if (!response.ok) throw new Error("Failed to submit response");
 

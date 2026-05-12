@@ -114,8 +114,11 @@ const InterviewResults: React.FC = () => {
                     <CardTitle>Improvement Suggestions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="whitespace-pre-line">{result.improvement_suggestions}</p>
+                    <ul className="list-disc pl-5 space-y-2">
+                        {result.improvement_suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
                 </CardContent>
+
             </Card>
         </div>
     );

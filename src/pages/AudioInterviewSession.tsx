@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 
 const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview/audio`;
 
-interface AudioInterviewSessionProps {}
+interface AudioInterviewSessionProps { }
 
 const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
@@ -24,19 +24,41 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
     const [currentBlob, setCurrentBlob] = useState<Blob | null>(null);
     const [allAnswersBlobs, setAllAnswersBlobs] = useState<Blob[]>([]);
-    
+
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const currentChunksRef = useRef<BlobPart[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
 
     useEffect(() => {
+        const fetchSession = async () => {
+            if (initialData && questions.length) return;
+
+            try {
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`${INTERVIEW_API_URL}/session/${sessionId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error("Session not found");
+
+                const data = await response.json();
+                // We'll just manually navigate to ourselves with the new state to 'refresh' properly
+                navigate(`/audio-interview/session/${sessionId}`, { state: { initialData: data }, replace: true });
+            } catch (err) {
+
+                console.error("Failed to fetch audio session:", err);
+                toast({
+                    variant: "destructive",
+                    title: "Session Error",
+                    description: "Failed to resume interview session."
+                });
+                navigate('/interview/audio/setup');
+            }
+        };
+
         if (!initialData || !questions.length) {
-            toast({
-                variant: "destructive",
-                title: "Session Error",
-                description: "No questions found. Please start a new interview.",
-            });
-            navigate('/dashboard');
+            fetchSession();
+            return;
         }
 
         // Request microphone access up front
@@ -61,41 +83,86 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 URL.revokeObjectURL(currentAudioUrl);
             }
         };
-    }, [initialData, navigate, questions.length, currentAudioUrl]);
+    }, [initialData, navigate, questions.length, currentAudioUrl, sessionId]);
 
-    const startRecording = () => {
-        if (!streamRef.current) {
-            toast({ variant: "destructive", title: "Error", description: "Microphone not initialized." });
-            return;
+
+    const ensureStream = async () => {
+        if (streamRef.current && streamRef.current.getTracks().every(t => t.readyState === 'live')) {
+            return streamRef.current;
         }
 
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            streamRef.current = stream;
+            return stream;
+        } catch (err) {
+            console.error("Failed to re-initialize microphone:", err);
+            toast({
+                variant: "destructive",
+                title: "Microphone Error",
+                description: "Could not access microphone for retake."
+            });
+            return null;
+        }
+    };
+
+    const startRecording = async () => {
+        // 1. Immediate UI feedback
+        setIsRecording(true);
         if (currentAudioUrl) {
             URL.revokeObjectURL(currentAudioUrl);
             setCurrentAudioUrl(null);
             setCurrentBlob(null);
         }
-
         currentChunksRef.current = [];
-        const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm' });
-        mediaRecorderRef.current = mediaRecorder;
 
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                currentChunksRef.current.push(event.data);
+        try {
+            const stream = await ensureStream();
+            if (!stream) {
+                setIsRecording(false);
+                return;
             }
-        };
 
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(currentChunksRef.current, { type: 'audio/webm' });
-            const url = URL.createObjectURL(blob);
-            setCurrentBlob(blob);
-            setCurrentAudioUrl(url);
+            // Detect best supported audio MIME type
+            let mimeType = 'audio/webm';
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                mimeType = 'audio/webm;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+                mimeType = 'audio/ogg;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                mimeType = 'audio/mp4';
+            }
+
+            const mediaRecorder = new MediaRecorder(stream, { mimeType });
+            mediaRecorderRef.current = mediaRecorder;
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    currentChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(currentChunksRef.current, { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                setCurrentBlob(blob);
+                setCurrentAudioUrl(url);
+                setIsRecording(false);
+            };
+
+            mediaRecorder.start(200); // Collect data every 200ms for stability
+        } catch (err) {
+            console.error("MediaRecorder start failed:", err);
+            toast({
+                variant: "destructive",
+                title: "Recording Failed",
+                description: "Could not start the recorder. Please refresh and try again."
+            });
             setIsRecording(false);
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
+        }
     };
+
+
 
     const stopRecording = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -125,7 +192,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
         try {
             // Concatenate all blobs into one final webm
             const mergedBlob = new Blob(finalBlobs, { type: 'audio/webm' });
-            
+
             const formData = new FormData();
             formData.append('audio', mergedBlob, `session_${sessionId}.webm`);
 
@@ -214,11 +281,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                                         </div>
                                     </div>
                                 )}
-                                
+
                                 <div className="flex gap-4">
                                     {!isRecording ? (
-                                        <Button 
-                                            size="lg" 
+                                        <Button
+                                            size="lg"
                                             onClick={startRecording}
                                             className={`${currentAudioUrl ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'gradient-primary'} px-8`}
                                         >
@@ -226,8 +293,8 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                                             {currentAudioUrl ? 'Retake Answer' : 'Start Answering'}
                                         </Button>
                                     ) : (
-                                        <Button 
-                                            size="lg" 
+                                        <Button
+                                            size="lg"
                                             variant="destructive"
                                             onClick={stopRecording}
                                             className="px-8 shadow-glow-sm"

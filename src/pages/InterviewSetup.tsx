@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +21,27 @@ const InterviewSetup: React.FC = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [jobDescription, setJobDescription] = useState('');
     const navigate = useNavigate();
+    const [activeSessions, setActiveSessions] = useState<any[]>([]);
+    
+    useEffect(() => {
+        fetchActiveSessions();
+    }, []);
+
+    const fetchActiveSessions = async () => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/active-sessions`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setActiveSessions(data.filter((s: any) => s.type === 'video'));
+            }
+        } catch (err) {
+            console.error("Failed to fetch active sessions", err);
+        }
+    };
+
     const { usage, isLoading: usageLoading, formatResetTime, triggerPaymentFlow, fetchUsage } = useUsage();
     
     const validation = validateJobDescription(jobDescription);
@@ -135,6 +157,24 @@ const InterviewSetup: React.FC = () => {
                     )}
 
                 </div>
+                
+                {activeSessions.length > 0 && (
+                    <Card className="mb-12 border-primary/30 bg-primary/5 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <div>
+                                <CardTitle className="text-xl font-poppins text-primary">Resume Unfinished Interview?</CardTitle>
+                                <CardDescription>You have an active session from {new Date(activeSessions[0].created_at).toLocaleString()}</CardDescription>
+                            </div>
+                            <Button 
+                                onClick={() => navigate(`/interview/session/${activeSessions[0].id}`)}
+                                className="gradient-primary"
+                            >
+                                Resume (Question {activeSessions[0].question_number})
+                            </Button>
+                        </CardHeader>
+                    </Card>
+                )}
+
 
                 <div className="grid lg:grid-cols-2 gap-8 mb-8">
                     <Card className="gradient-card border-0">
