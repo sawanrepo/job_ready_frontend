@@ -472,6 +472,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const initiateGoogleLogin = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    console.log("Initiating Google login with Client ID:", clientId);
+    console.log("All Vite Env:", import.meta.env);
     const redirectUri = `${window.location.origin}/login`;
     const scope = 'email profile';
     
