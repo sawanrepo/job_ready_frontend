@@ -150,9 +150,9 @@ const Register = () => {
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   required
                 />
-                <label htmlFor="agreeToTerms" className="text-sm text-white/90">
+                <label htmlFor="agreeToTerms" className="text-sm text-slate-700">
                   I agree to the{' '}
-                  <Link to="/terms" target="_blank" className="text-white font-bold hover:underline">
+                  <Link to="/terms" target="_blank" className="text-primary font-bold hover:underline">
                     Terms and Conditions
                   </Link>
                 </label>

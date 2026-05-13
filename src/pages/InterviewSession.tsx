@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Mic, Square, Send } from 'lucide-react';
 import { InterviewResponse } from '@/types/interview';
+import { toast } from '@/hooks/use-toast';
 
 const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
 

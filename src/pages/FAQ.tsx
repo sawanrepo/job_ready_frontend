@@ -44,6 +44,26 @@ const FAQ = () => {
       question: "How long does the analysis take?",
       answer: "Most analyses are completed within 30-60 seconds. Resume tailoring may take slightly longer depending on the complexity of the job description and resume content.",
     },
+    {
+      question: "How do Mock Interviews work?",
+      answer: "Mock Interviews allow you to practice your skills in a simulated environment. You'll be presented with industry-standard questions and record your responses via video. Our AI then analyzes your communication, technical knowledge, and confidence to provide actionable feedback.",
+    },
+    {
+      question: "What is a Rapid Fire Interview?",
+      answer: "The Rapid Fire Interview is an audio-only session designed to test your quick thinking. You'll get 10 questions in quick succession, and you'll provide your answers using your microphone. It's a great way to build confidence and refine your verbal communication.",
+    },
+    {
+      question: "Can I retake a question during an interview?",
+      answer: "In the Mock Interview (Video), you have the option to 'Retake' your answer before submitting it for evaluation. However, in the Rapid Fire Interview (Audio), the emphasis is on quick response, so we encourage you to go with your first instinct!",
+    },
+    {
+      question: "How do I see my interview performance?",
+      answer: "After completing an interview, you'll be redirected to a detailed Results page. You'll see scores for communication, technical skills, problem-solving, and confidence, along with specific strengths, weaknesses, and suggestions for improvement.",
+    },
+    {
+      question: "Do I need a camera for all interviews?",
+      answer: "No. While the Mock Interview requires a camera for full video analysis, the Rapid Fire Interview is audio-only and only requires a working microphone. You can choose the format that best suits your practice needs.",
+    },
   ];
 
   const features = [
@@ -146,7 +166,7 @@ const FAQ = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 {isAuthenticated ? (
-                  <Button 
+                  <Button
                     onClick={() => navigate('/dashboard')}
                     className="gradient-primary hover:shadow-glow transition-all duration-300"
                   >
@@ -154,13 +174,13 @@ const FAQ = () => {
                   </Button>
                 ) : (
                   <>
-                    <Button 
+                    <Button
                       onClick={() => navigate('/register')}
                       className="gradient-primary hover:shadow-glow transition-all duration-300"
                     >
                       Get Started Today
                     </Button>
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={() => navigate('/login')}
                       className="hover:bg-primary hover:text-primary-foreground"

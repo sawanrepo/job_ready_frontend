@@ -18,7 +18,7 @@ export interface InterviewResult {
     confidence_score: number;
     strengths: string[];
     weaknesses: string[];
-    improvement_suggestions: string;
+    improvement_suggestions: string[];
     final_verdict: string;
     feedback_summary: string;
 }
