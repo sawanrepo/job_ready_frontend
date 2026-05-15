@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Mic, Square, Loader2, CheckCircle2 } from 'lucide-react';
+import { Mic, Square, Loader2, CheckCircle2, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview/audio`;
@@ -17,13 +17,14 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const initialData = location.state?.initialData;
     const questions: string[] = initialData?.questions || [];
     const totalQuestions = initialData?.totalQuestions || 10;
+    const initialIndex = initialData?.current_question_index || 0;
 
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(initialIndex);
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
     const [currentBlob, setCurrentBlob] = useState<Blob | null>(null);
-    const [allAnswersBlobs, setAllAnswersBlobs] = useState<Blob[]>([]);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const currentChunksRef = useRef<BlobPart[]>([]);
@@ -31,7 +32,13 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
 
     useEffect(() => {
         const fetchSession = async () => {
-            if (initialData && questions.length) return;
+            if (initialData && questions.length) {
+                // If we have history, ensure we are at the right index
+                if (initialIndex !== currentQuestionIndex) {
+                    setCurrentQuestionIndex(initialIndex);
+                }
+                return;
+            }
 
             try {
                 const token = localStorage.getItem('access_token');
@@ -45,7 +52,6 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 // We'll just manually navigate to ourselves with the new state to 'refresh' properly
                 navigate(`/audio-interview/session/${sessionId}`, { state: { initialData: data }, replace: true });
             } catch (err) {
-
                 console.error("Failed to fetch audio session:", err);
                 toast({
                     variant: "destructive",
@@ -56,12 +62,9 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             }
         };
 
-        if (!initialData || !questions.length) {
-            fetchSession();
-            return;
-        }
+        fetchSession();
 
-        // Request microphone access up front
+        // Request microphone access
         navigator.mediaDevices.getUserMedia({ audio: true, video: false })
             .then(stream => {
                 streamRef.current = stream;
@@ -83,7 +86,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 URL.revokeObjectURL(currentAudioUrl);
             }
         };
-    }, [initialData, navigate, questions.length, currentAudioUrl, sessionId]);
+    }, [initialData, navigate, questions.length, sessionId, initialIndex]);
 
 
     const ensureStream = async () => {
@@ -97,17 +100,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             return stream;
         } catch (err) {
             console.error("Failed to re-initialize microphone:", err);
-            toast({
-                variant: "destructive",
-                title: "Microphone Error",
-                description: "Could not access microphone for retake."
-            });
             return null;
         }
     };
 
     const startRecording = async () => {
-        // 1. Immediate UI feedback
         setIsRecording(true);
         if (currentAudioUrl) {
             URL.revokeObjectURL(currentAudioUrl);
@@ -123,12 +120,9 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 return;
             }
 
-            // Detect best supported audio MIME type
             let mimeType = 'audio/webm';
             if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
                 mimeType = 'audio/webm;codecs=opus';
-            } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-                mimeType = 'audio/ogg;codecs=opus';
             } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
                 mimeType = 'audio/mp4';
             }
@@ -150,19 +144,12 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 setIsRecording(false);
             };
 
-            mediaRecorder.start(200); // Collect data every 200ms for stability
+            mediaRecorder.start(200);
         } catch (err) {
             console.error("MediaRecorder start failed:", err);
-            toast({
-                variant: "destructive",
-                title: "Recording Failed",
-                description: "Could not start the recorder. Please refresh and try again."
-            });
             setIsRecording(false);
         }
     };
-
-
 
     const stopRecording = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -173,41 +160,53 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const handleNextQuestion = async () => {
         if (!currentBlob) return;
 
-        const updatedBlobs = [...allAnswersBlobs];
-        updatedBlobs[currentQuestionIndex] = currentBlob;
-        setAllAnswersBlobs(updatedBlobs);
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('audio', currentBlob, 'answer.webm');
+            formData.append('question_index', currentQuestionIndex.toString());
 
-        if (currentQuestionIndex < totalQuestions - 1) {
-            setCurrentQuestionIndex(prev => prev + 1);
-            setCurrentAudioUrl(null);
-            setCurrentBlob(null);
-            currentChunksRef.current = [];
-        } else {
-            await submitInterview(updatedBlobs);
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/answer`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Failed to upload answer");
+
+            if (currentQuestionIndex < totalQuestions - 1) {
+                setCurrentQuestionIndex(prev => prev + 1);
+                setCurrentAudioUrl(null);
+                setCurrentBlob(null);
+                currentChunksRef.current = [];
+            } else {
+                await submitInterview();
+            }
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: "Upload Failed",
+                description: "Failed to save your answer. Please try again."
+            });
+        } finally {
+            setIsUploading(false);
         }
     };
 
-    const submitInterview = async (finalBlobs: Blob[]) => {
+    const submitInterview = async () => {
         setIsProcessing(true);
         try {
-            // Concatenate all blobs into one final webm
-            const mergedBlob = new Blob(finalBlobs, { type: 'audio/webm' });
-
-            const formData = new FormData();
-            formData.append('audio', mergedBlob, `session_${sessionId}.webm`);
-
             const token = localStorage.getItem('access_token');
             const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/result`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData,
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (!response.ok) {
                 const errData = await response.json();
-                throw new Error(errData.detail || "Failed to submit audio answers");
+                throw new Error(errData.detail || "Failed to submit interview");
             }
 
             const resultData = await response.json();
@@ -217,7 +216,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             console.error(error);
             toast({
                 variant: "destructive",
-                title: "Error submitting answers",
+                title: "Error",
                 description: error.message || "Failed to analyze interview.",
             });
             setIsProcessing(false);
@@ -249,7 +248,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                         </div>
                         <h2 className="text-2xl font-bold font-poppins text-center">Analyzing Your Answers...</h2>
                         <p className="text-muted-foreground text-center max-w-md">
-                            Our AI is listening to your complete interview and evaluating your responses. This usually takes a minute or two.
+                            Our AI is reviewing your transcripts and generating your performance report. This may take a minute.
                         </p>
                     </div>
                 ) : (
@@ -287,6 +286,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                                         <Button
                                             size="lg"
                                             onClick={startRecording}
+                                            disabled={isUploading}
                                             className={`${currentAudioUrl ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'gradient-primary'} px-8`}
                                         >
                                             <Mic className="w-4 h-4 mr-2" />
@@ -310,10 +310,15 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                                         size="lg"
                                         variant="outline"
                                         onClick={handleNextQuestion}
-                                        disabled={isRecording || !currentAudioUrl}
+                                        disabled={isRecording || !currentAudioUrl || isUploading}
                                         className="w-full md:w-auto min-w-[200px] border-primary text-primary hover:bg-primary/5"
                                     >
-                                        {isLastQuestion ? (
+                                        {isUploading ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Saving Answer...
+                                            </>
+                                        ) : isLastQuestion ? (
                                             <>
                                                 <CheckCircle2 className="w-4 h-4 mr-2" />
                                                 Finish & Submit
