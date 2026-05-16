@@ -158,7 +158,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
 
     // Anti-Cheating Listeners
     useEffect(() => {
-        if (isMalpractice) return;
+        if (isMalpractice || isProcessing) return;
 
         const handleWarning = async (reason: string) => {
             try {
@@ -221,7 +221,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             document.removeEventListener("fullscreenchange", onFullscreenChange);
             document.removeEventListener("copy", onCopy as any);
         };
-    }, [sessionId, isMalpractice, hasStartedSession, isRecording]);
+    }, [sessionId, isMalpractice, hasStartedSession, isRecording, isProcessing]);
 
     // Handle timer - starts per question
     useEffect(() => {
@@ -386,6 +386,10 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
 
     const submitInterview = async () => {
         setIsProcessing(true);
+        // Automatically exit fullscreen when analysis starts
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => { });
+        }
         try {
             const token = localStorage.getItem('access_token');
             const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/result`, {
@@ -428,17 +432,20 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     if (isMalpractice) {
         return (
             <div className="min-h-screen bg-secondary/30 flex flex-col items-center justify-center p-4">
-                <Card className="w-full max-w-md shadow-strong border-t-4 border-t-red-500">
+                <Card className="w-full max-w-md shadow-strong border-t-4 border-t-red-600">
                     <CardContent className="p-8 text-center space-y-6">
                         <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
                             <Square className="w-10 h-10 text-red-600" />
                         </div>
-                        <h2 className="text-2xl font-bold text-foreground font-poppins">Interview Terminated</h2>
-                        <p className="text-muted-foreground">
-                            This session has been ended because we detected actions that violate our anti-cheating policy (tab switching or exiting full screen).
+                        <h2 className="text-2xl font-bold text-foreground font-poppins">Interview Discarded</h2>
+                        <p className="text-muted-foreground font-medium">
+                            This interview has been discarded due to malpractice (detected multiple tab switches or exiting full screen).
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            No results will be generated for this session. Please maintain focus in your next attempt.
                         </p>
                         <Button 
-                            className="w-full gradient-primary" 
+                            className="w-full bg-red-600 hover:bg-red-700 text-white" 
                             onClick={() => navigate('/dashboard')}
                         >
                             Return to Dashboard

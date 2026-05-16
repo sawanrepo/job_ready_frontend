@@ -28,10 +28,20 @@ const InterviewResults: React.FC = () => {
         const fetchResult = async () => {
             try {
                 const token = localStorage.getItem('access_token');
-                const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/result`, {
+                // Try the unified interview results endpoint first
+                let response = await fetch(`${import.meta.env.VITE_API_URL}/interview/${sessionId}/result`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (!response.ok) throw new Error('Failed to fetch results');
+                
+                // If not found, it might be under the audio-specific endpoint (or vice versa depending on router priority)
+                if (!response.ok) {
+                    response = await fetch(`${import.meta.env.VITE_API_URL}/interview/audio/${sessionId}/result`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                }
+
+                if (!response.ok) throw new Error('Failed to fetch results. The session might have expired or doesn\'t exist.');
+                
                 const data = await response.json();
                 setResult(data);
             } catch (err) {
