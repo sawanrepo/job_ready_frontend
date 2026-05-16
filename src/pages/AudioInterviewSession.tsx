@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Mic, Square, Loader2, CheckCircle2, Save } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Mic, Square, Loader2, CheckCircle2, Save, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview/audio`;
@@ -10,13 +10,14 @@ const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview/audio`;
 interface AudioInterviewSessionProps { }
 
 const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
-    const { sessionId } = useParams<{ sessionId: string }>();
+    const { sessionId: paramSessionId } = useParams<{ sessionId: string }>();
+    const [sessionId, setSessionId] = useState<string | null>(paramSessionId === 'new' ? null : paramSessionId || null);
     const location = useLocation();
     const navigate = useNavigate();
 
     const initialData = location.state?.initialData;
-    const questions: string[] = initialData?.questions || [];
-    const totalQuestions = initialData?.totalQuestions || 10;
+    const [questions, setQuestions] = useState<string[]>(initialData?.questions || []);
+    const [totalQuestions, setTotalQuestions] = useState(initialData?.total_questions || 10);
     const initialIndex = initialData?.current_question_index || 0;
 
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(initialIndex);
@@ -25,32 +26,87 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
     const [currentBlob, setCurrentBlob] = useState<Blob | null>(null);
+    const [recordingTimeLeft, setRecordingTimeLeft] = useState(150); // 2:30 min total
+    const [currentRecordingTime, setCurrentRecordingTime] = useState(0); // Time spent in current recording
+    const [warnings, setWarnings] = useState(initialData?.warnings_count || 0);
+    const [isMalpractice, setIsMalpractice] = useState(false);
+    const [hasStartedSession, setHasStartedSession] = useState(false);
+    const [hasRetaken, setHasRetaken] = useState(false);
+    const [hasAgreedToRules, setHasAgreedToRules] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(document.fullscreenElement !== null);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const currentChunksRef = useRef<BlobPart[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
+    const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         const fetchSession = async () => {
-            if (initialData && questions.length) {
-                // If we have history, ensure we are at the right index
-                if (initialIndex !== currentQuestionIndex) {
-                    setCurrentQuestionIndex(initialIndex);
+            // Handle new session creation
+            if (location.state?.isNew && !sessionId) {
+                try {
+                    const token = localStorage.getItem('access_token');
+                    const formData = new FormData();
+                    formData.append('resume_pdf', location.state.resumeFile);
+                    formData.append('job_description', location.state.jobDescription);
+
+                    const response = await fetch(`${INTERVIEW_API_URL}/start`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.detail || "Failed to start interview");
+                    }
+
+                    const data = await response.json();
+                    setSessionId(data.session_id);
+                    setQuestions(data.questions);
+                    setTotalQuestions(data.total_questions);
+                    // Update URL and state to reflect that we are no longer "new"
+                    navigate(`/audio-interview/session/${data.session_id}`, { 
+                        replace: true, 
+                        state: { ...location.state, isNew: false, initialData: data } 
+                    });
+                } catch (err: any) {
+                    console.error("Failed to start new interview:", err);
+                    toast({
+                        variant: "destructive",
+                        title: "Setup Error",
+                        description: err.message || "Failed to generate questions."
+                    });
+                    navigate('/interview/audio/setup');
                 }
                 return;
             }
+
+            if (initialData && questions.length) {
+                if (initialIndex !== currentQuestionIndex) {
+                    setCurrentQuestionIndex(initialIndex);
+                }
+                if (initialData.warnings_count !== undefined) {
+                    setWarnings(initialData.warnings_count);
+                }
+                return;
+            }
+            if (!sessionId) return;
 
             try {
                 const token = localStorage.getItem('access_token');
                 const response = await fetch(`${INTERVIEW_API_URL}/session/${sessionId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (!response.ok) throw new Error("Session not found");
-
                 const data = await response.json();
-                // We'll just manually navigate to ourselves with the new state to 'refresh' properly
-                navigate(`/audio-interview/session/${sessionId}`, { state: { initialData: data }, replace: true });
+                if (!data.is_active) {
+                    setIsMalpractice(true);
+                }
+                setWarnings(data.warnings_count || 0);
+                setQuestions(data.questions);
+                setTotalQuestions(data.total_questions);
+                setCurrentQuestionIndex(data.current_question_index);
             } catch (err) {
                 console.error("Failed to fetch audio session:", err);
                 toast({
@@ -64,19 +120,27 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
 
         fetchSession();
 
-        // Request microphone access
         navigator.mediaDevices.getUserMedia({ audio: true, video: false })
             .then(stream => {
                 streamRef.current = stream;
             })
             .catch(err => {
                 console.error("Microphone access denied:", err);
-                toast({
-                    variant: "destructive",
-                    title: "Microphone required",
-                    description: "Please allow microphone access to record your answers.",
-                });
             });
+
+        // Security: Full Screen
+        const enterFullScreen = async () => {
+            try {
+                if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen();
+                }
+            } catch (err) {
+                console.error("Fullscreen request failed", err);
+            }
+        };
+
+        // We try to enter fullscreen. If it fails (requires user gesture), we'll try again on first click.
+        enterFullScreen();
 
         return () => {
             if (streamRef.current) {
@@ -85,15 +149,123 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             if (currentAudioUrl) {
                 URL.revokeObjectURL(currentAudioUrl);
             }
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => { });
+            }
         };
     }, [initialData, navigate, questions.length, sessionId, initialIndex]);
+
+    // Anti-Cheating Listeners
+    useEffect(() => {
+        if (isMalpractice) return;
+
+        const handleWarning = async (reason: string) => {
+            try {
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/warning`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                setWarnings(data.warnings_count);
+                
+                if (data.warnings_count >= 5 || !data.is_active) {
+                    setIsMalpractice(true);
+                    toast({
+                        variant: "destructive",
+                        title: "Interview Terminated",
+                        description: "Tried to malpractice. Interview ended."
+                    });
+                } else {
+                    toast({
+                        variant: "destructive",
+                        title: "Warning!",
+                        description: `${reason} detected! Warning ${data.warnings_count}/5`
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to report warning:", err);
+            }
+        };
+
+        const onVisibilityChange = () => {
+            if (document.hidden) {
+                handleWarning("Tab change");
+            }
+        };
+
+        const onFullscreenChange = () => {
+            const isFull = document.fullscreenElement !== null;
+            setIsFullscreen(isFull);
+            if (!isFull && !isMalpractice && hasStartedSession) {
+                handleWarning("Exit full screen");
+                if (isRecording) stopRecording();
+            }
+        };
+
+        const onCopy = (e: ClipboardEvent) => {
+            e.preventDefault();
+            toast({
+                title: "Action Prohibited",
+                description: "Copying is disabled during the interview."
+            });
+        };
+
+        document.addEventListener("visibilitychange", onVisibilityChange);
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        document.addEventListener("copy", onCopy as any);
+
+        return () => {
+            document.removeEventListener("visibilitychange", onVisibilityChange);
+            document.removeEventListener("fullscreenchange", onFullscreenChange);
+            document.removeEventListener("copy", onCopy as any);
+        };
+    }, [sessionId, isMalpractice, hasStartedSession, isRecording]);
+
+    // Handle timer - starts per question
+    useEffect(() => {
+        if (isMalpractice || isProcessing || isUploading || !hasStartedSession || !isFullscreen) {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            return;
+        }
+
+        timerIntervalRef.current = setInterval(() => {
+            setRecordingTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(timerIntervalRef.current!);
+                    if (isRecording) stopRecording();
+                    handleNextQuestion(); // Auto-submit or skip? User said "under which he has to read question + record answer"
+                    return 0;
+                }
+                return prev - 1;
+            });
+
+            if (isRecording) {
+                setCurrentRecordingTime(prev => {
+                    if (prev >= 119) { // 2 minutes limit
+                        stopRecording();
+                        toast({
+                            title: "Recording Limit",
+                            description: "Maximum recording time of 2 minutes reached."
+                        });
+                        return 120;
+                    }
+                    return prev + 1;
+                });
+            }
+        }, 1000);
+
+        return () => {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        };
+    }, [currentQuestionIndex, isMalpractice, isProcessing, isUploading, isRecording, hasStartedSession, isFullscreen]);
 
 
     const ensureStream = async () => {
         if (streamRef.current && streamRef.current.getTracks().every(t => t.readyState === 'live')) {
             return streamRef.current;
         }
-
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             streamRef.current = stream;
@@ -105,12 +277,25 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     };
 
     const startRecording = async () => {
-        setIsRecording(true);
         if (currentAudioUrl) {
+            if (hasRetaken) {
+                toast({
+                    variant: "destructive",
+                    title: "Limit Reached",
+                    description: "Only one retake is allowed per question."
+                });
+                return;
+            }
+            // Retake logic: add 60 seconds to total question timer
+            setRecordingTimeLeft(prev => prev + 60);
+            setHasRetaken(true);
             URL.revokeObjectURL(currentAudioUrl);
             setCurrentAudioUrl(null);
             setCurrentBlob(null);
         }
+        
+        setIsRecording(true);
+        setCurrentRecordingTime(0); // Reset current recording timer
         currentChunksRef.current = [];
 
         try {
@@ -142,6 +327,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 setCurrentBlob(blob);
                 setCurrentAudioUrl(url);
                 setIsRecording(false);
+                if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
             };
 
             mediaRecorder.start(200);
@@ -155,6 +341,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
             mediaRecorderRef.current.stop();
         }
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
 
     const handleNextQuestion = async () => {
@@ -179,6 +366,8 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 setCurrentQuestionIndex(prev => prev + 1);
                 setCurrentAudioUrl(null);
                 setCurrentBlob(null);
+                setRecordingTimeLeft(150); // Reset for next question
+                setHasRetaken(false); // Reset retake for next question
                 currentChunksRef.current = [];
             } else {
                 await submitInterview();
@@ -223,18 +412,200 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
         }
     };
 
+    const reenterFullscreen = async () => {
+        try {
+            await document.documentElement.requestFullscreen();
+            setIsFullscreen(true);
+        } catch (err) {
+            toast({
+                variant: "destructive",
+                title: "Fullscreen Required",
+                description: "Please click the button to re-enter fullscreen mode."
+            });
+        }
+    };
+
+    if (isMalpractice) {
+        return (
+            <div className="min-h-screen bg-secondary/30 flex flex-col items-center justify-center p-4">
+                <Card className="w-full max-w-md shadow-strong border-t-4 border-t-red-500">
+                    <CardContent className="p-8 text-center space-y-6">
+                        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                            <Square className="w-10 h-10 text-red-600" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-foreground font-poppins">Interview Terminated</h2>
+                        <p className="text-muted-foreground">
+                            This session has been ended because we detected actions that violate our anti-cheating policy (tab switching or exiting full screen).
+                        </p>
+                        <Button 
+                            className="w-full gradient-primary" 
+                            onClick={() => navigate('/dashboard')}
+                        >
+                            Return to Dashboard
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (!hasStartedSession) {
+        return (
+            <div className="min-h-screen bg-secondary/30 flex flex-col items-center justify-center p-4">
+                <Card className="w-full max-w-xl shadow-strong">
+                    <CardHeader className="text-center border-b pb-6">
+                        <CardTitle className="text-3xl font-bold text-gradient font-poppins">Interview Rules & Guidelines</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <h3 className="font-bold flex items-center gap-2 text-primary">
+                                    <Mic className="w-5 h-5" /> Recording Rules
+                                </h3>
+                                <ul className="text-sm text-muted-foreground space-y-3">
+                                    <li className="flex gap-2">
+                                        <span className="text-primary font-bold">•</span>
+                                        <span>Total time per question: <strong>2:30 minutes</strong> (Read + Answer).</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="text-primary font-bold">•</span>
+                                        <span>Max recording length: <strong>2 minutes</strong>.</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="text-primary font-bold">•</span>
+                                        <span>You can <strong>Retake</strong> an answer only <strong>once</strong> per question.</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="text-primary font-bold">•</span>
+                                        <span>Retaking adds <strong>1 extra minute</strong> to your remaining time.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="space-y-4">
+                                <h3 className="font-bold flex items-center gap-2 text-red-500">
+                                    <Square className="w-5 h-5" /> Anti-Cheating Policy
+                                </h3>
+                                <ul className="text-sm text-muted-foreground space-y-3">
+                                    <li className="flex gap-2">
+                                        <span className="text-red-500 font-bold">•</span>
+                                        <span>The interview must be conducted in <strong>Full Screen</strong> mode.</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="text-red-500 font-bold">•</span>
+                                        <span><strong>Do not switch tabs</strong> or minimize the browser.</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="text-red-500 font-bold">•</span>
+                                        <span>Exiting full screen counts as a <strong>Warning</strong> and pauses the interview.</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="text-red-500 font-bold">•</span>
+                                        <span><strong>5 Warnings</strong> will result in immediate termination.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div className="bg-secondary/50 p-4 rounded-lg border border-dashed border-primary/30 mt-6">
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                                <input 
+                                    type="checkbox" 
+                                    className="w-5 h-5 rounded border-primary text-primary focus:ring-primary cursor-pointer"
+                                    checked={hasAgreedToRules}
+                                    onChange={(e) => setHasAgreedToRules(e.target.checked)}
+                                />
+                                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                    I have read and understand the rules, and I wish to proceed.
+                                </span>
+                            </label>
+                        </div>
+
+                        <Button 
+                            className="w-full gradient-primary py-7 text-xl font-bold shadow-glow-sm" 
+                            disabled={!hasAgreedToRules || !questions.length}
+                            onClick={async () => {
+                                try {
+                                    await document.documentElement.requestFullscreen();
+                                    setIsFullscreen(true);
+                                    setHasStartedSession(true);
+                                } catch (err) {
+                                    setHasStartedSession(true);
+                                }
+                            }}
+                        >
+                            {!questions.length ? (
+                                <>
+                                    <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                                    Preparing Your Questions...
+                                </>
+                            ) : (
+                                "Start Interview Now"
+                            )}
+                        </Button>
+                        {!questions.length && (
+                            <p className="text-xs text-center text-muted-foreground animate-pulse">
+                                Hang tight! Our AI is tailoring questions based on your profile...
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (!isFullscreen) {
+        return (
+            <div className="min-h-screen bg-secondary/30 flex flex-col items-center justify-center p-4">
+                <Card className="w-full max-w-md shadow-strong border-t-4 border-t-orange-500">
+                    <CardContent className="p-8 text-center space-y-6">
+                        <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+                            <AlertCircle className="w-10 h-10 text-orange-600" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-foreground font-poppins">Interview Paused</h2>
+                        <p className="text-muted-foreground">
+                            Full-screen mode is mandatory for this interview. Please return to full-screen to resume.
+                        </p>
+                        <Button 
+                            className="w-full gradient-primary" 
+                            onClick={reenterFullscreen}
+                        >
+                            Resume Interview (Re-enter Full Screen)
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     if (!questions.length) return null;
 
     const currentQuestion = questions[currentQuestionIndex];
     const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     return (
         <div className="min-h-screen bg-secondary/30 flex flex-col">
             <header className="bg-white shadow-soft border-b p-4">
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
                     <h1 className="text-xl font-bold text-gradient font-poppins">Rapid Fire Audio Interview</h1>
-                    <div className="text-sm font-medium text-muted-foreground bg-secondary px-3 py-1 rounded-full">
-                        Question {currentQuestionIndex + 1} of {totalQuestions}
+                    <div className="flex items-center gap-4">
+                        <div className={`text-sm font-bold px-3 py-1 rounded-full ${warnings >= 4 ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                            Warnings: {warnings}/5
+                        </div>
+                        {recordingTimeLeft < 30 && (
+                            <div className="flex items-center gap-2 text-red-500 font-mono font-bold animate-pulse">
+                                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                                {formatTime(recordingTimeLeft)}
+                            </div>
+                        )}
+                        <div className="text-sm font-medium text-muted-foreground bg-secondary px-3 py-1 rounded-full">
+                            Question {currentQuestionIndex + 1} of {totalQuestions}
+                        </div>
                     </div>
                 </div>
             </header>
@@ -254,16 +625,25 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 ) : (
                     <Card className="w-full shadow-strong border-0 gradient-card overflow-hidden">
                         <CardContent className="p-8 md:p-12">
-                            <div className="text-center mb-10">
-                                <h2 className="text-2xl md:text-3xl font-semibold mb-6 text-foreground font-poppins leading-relaxed">
+                            <div className="text-center mb-6">
+                                <h2 className="text-2xl md:text-3xl font-semibold mb-6 text-foreground font-poppins leading-relaxed select-none">
                                     {currentQuestion}
                                 </h2>
+                                <div className="flex flex-col items-center gap-2">
+                                    <p className="text-sm text-muted-foreground font-medium">Time Remaining: <span className={recordingTimeLeft < 30 ? 'text-red-500 font-bold' : ''}>{formatTime(recordingTimeLeft)}</span></p>
+                                    <p className="text-xs text-muted-foreground">Read question & record your answer before time runs out.</p>
+                                </div>
                             </div>
 
                             <div className="flex flex-col items-center justify-center space-y-8">
                                 <div className={`relative flex items-center justify-center w-32 h-32 rounded-full border-4 transition-all duration-300 ${isRecording ? 'border-red-500 bg-red-50' : currentAudioUrl ? 'border-green-500 bg-green-50' : 'border-primary bg-primary/5'}`}>
                                     {isRecording && (
                                         <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping"></div>
+                                    )}
+                                    {isRecording && (
+                                        <span className="absolute -top-4 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
+                                            {formatTime(recordingTimeLeft)}
+                                        </span>
                                     )}
                                     {currentAudioUrl && !isRecording ? (
                                         <CheckCircle2 className="w-12 h-12 text-green-500" />

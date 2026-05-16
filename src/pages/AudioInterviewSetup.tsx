@@ -78,39 +78,15 @@ const AudioInterviewSetup: React.FC = () => {
         }
 
 
-        setIsLoading(true);
-        try {
-            const token = localStorage.getItem('access_token');
-            const formData = new FormData();
-            formData.append('resume_pdf', selectedFile);
-            formData.append('job_description', jobDescription);
-
-            const response = await fetch(`${INTERVIEW_API_URL}/start`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to start interview');
-            }
-
-            const result = await response.json();
-            fetchUsage(); // Refresh usage after starting
-            navigate(`/audio-interview/session/${result.session_id}`, { state: { initialData: result } });
-        } catch (error: any) {
-            console.error(error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: error.message || "Failed to start interview. Please try again.",
-            });
-        } finally {
-            setIsLoading(false);
-        }
+        // Navigate immediately to the session page with the data
+        // The session page will handle the actual /start call while showing rules
+        navigate(`/audio-interview/session/new`, { 
+            state: { 
+                isNew: true,
+                resumeFile: selectedFile,
+                jobDescription: jobDescription
+            } 
+        });
     };
 
     const canStartInterview = usage && (usage.audio_interviews_left || 0) > 0;
