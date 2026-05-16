@@ -286,8 +286,8 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 });
                 return;
             }
-            // Retake logic: add 60 seconds to total question timer
-            setRecordingTimeLeft(prev => prev + 60);
+            // Retake logic: add 60 seconds to total question timer (capped at 150s)
+            setRecordingTimeLeft(prev => Math.min(150, prev + 60));
             setHasRetaken(true);
             URL.revokeObjectURL(currentAudioUrl);
             setCurrentAudioUrl(null);
