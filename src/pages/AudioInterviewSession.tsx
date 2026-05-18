@@ -77,7 +77,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                         title: "Setup Error",
                         description: err.message || "Failed to generate questions."
                     });
-                    navigate('/interview/audio/setup');
+                    navigate('/audio-interview');
                 }
                 return;
             }
@@ -114,7 +114,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                     title: "Session Error",
                     description: "Failed to resume interview session."
                 });
-                navigate('/interview/audio/setup');
+                navigate('/audio-interview');
             }
         };
 
@@ -345,7 +345,14 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     };
 
     const handleNextQuestion = async () => {
-        if (!currentBlob) return;
+        if (!currentBlob || !sessionId) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Recording or session missing. Please try again."
+            });
+            return;
+        }
 
         setIsUploading(true);
         try {
@@ -354,30 +361,36 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             formData.append('question_index', currentQuestionIndex.toString());
 
             const token = localStorage.getItem('access_token');
+            if (!token) throw new Error("Authentication session expired.");
+
             const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/answer`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData,
             });
 
-            if (!response.ok) throw new Error("Failed to upload answer");
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || "Failed to upload answer");
+            }
 
+            // Successfully uploaded
             if (currentQuestionIndex < totalQuestions - 1) {
                 setCurrentQuestionIndex(prev => prev + 1);
                 setCurrentAudioUrl(null);
                 setCurrentBlob(null);
-                setRecordingTimeLeft(150); // Reset for next question
-                setHasRetaken(false); // Reset retake for next question
+                setRecordingTimeLeft(150);
+                setHasRetaken(false);
                 currentChunksRef.current = [];
             } else {
                 await submitInterview();
             }
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            console.error("Answer submission error:", error);
             toast({
                 variant: "destructive",
                 title: "Upload Failed",
-                description: "Failed to save your answer. Please try again."
+                description: error.message || "Failed to save your answer. Please try again."
             });
         } finally {
             setIsUploading(false);

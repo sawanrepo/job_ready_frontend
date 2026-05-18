@@ -34,14 +34,7 @@ const Dashboard = () => {
       path: '/resume-history',
       color: 'text-green-600',
       bg: 'bg-green-50',
-    },
-    {
-      icon: Video,
-      title: 'Mock Interview',
-      description: 'Practice with AI-driven video mock interviews',
-      path: '/interview',
-      color: 'text-red-600',
-      bg: 'bg-red-50',
+      actionLabel: 'Check History',
     },
     {
       icon: Mic,
@@ -52,12 +45,21 @@ const Dashboard = () => {
       bg: 'bg-orange-50',
     },
     {
+      icon: Video,
+      title: 'Mock Interview',
+      description: 'Practice with AI-driven video mock interviews',
+      path: '/interview',
+      color: 'text-red-600',
+      bg: 'bg-red-50',
+      badge: 'Beta',
+    },    {
       icon: History,
       title: 'Interview History',
       description: 'Review your latest interview performance',
       path: '/interview-history',
       color: 'text-teal-600',
       bg: 'bg-teal-50',
+      actionLabel: 'Check History',
     },
   ];
 
@@ -91,8 +93,13 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <h3 className="text-xl font-semibold mb-3 font-poppins">
+                <h3 className="text-xl font-semibold mb-3 font-poppins flex items-center justify-center gap-2">
                   {feature.title}
+                  {feature.badge && (
+                    <span className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[10px] px-2 py-0.5 rounded-full font-sans uppercase font-bold tracking-wider animate-pulse shadow-sm border border-amber-300">
+                      {feature.badge}
+                    </span>
+                  )}
                 </h3>
 
                 <p className="text-muted-foreground mb-6 leading-relaxed">
@@ -102,7 +109,7 @@ const Dashboard = () => {
                 <Button
                   className="w-full gradient-primary hover:shadow-glow transition-all duration-300"
                 >
-                  Get Started
+                  {feature.actionLabel || 'Get Started'}
                 </Button>
               </CardContent>
             </Card>

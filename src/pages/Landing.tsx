@@ -70,9 +70,8 @@ const Landing = () => {
             </Button>
             <Button 
               size="lg" 
-              variant="outline"
               onClick={() => navigate('/register')}
-              className="border-white text-white hover:bg-white hover:text-primary font-semibold px-8"
+              className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-indigo-600 font-semibold px-8 transition-all duration-300"
             >
               Join Today
             </Button>

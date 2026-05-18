@@ -18,8 +18,61 @@ export interface ATSCheckResponse {
   score?: number;
 }
 
+export interface PersonalInfo {
+  location?: string;
+  phone?: string;
+  email?: string;
+  github?: string;
+  github_url?: string;
+  linkedin?: string;
+  linkedin_url?: string;
+  portfolio?: string;
+  portfolio_url?: string;
+}
+
+export interface ExperienceItem {
+  role?: string;
+  company?: string;
+  duration?: string;
+  details?: string[];
+}
+
+export interface ProjectItem {
+  title?: string;
+  tech_stack?: string;
+  details?: string[];
+}
+
+export interface EducationItem {
+  degree?: string;
+  institution?: string;
+  grade?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface CertificationItem {
+  title?: string;
+  link?: string;
+  date?: string;
+}
+
+export interface TailoredContent {
+  name?: string;
+  tagline?: string;
+  personal_info?: PersonalInfo;
+  summary?: string;
+  skills?: Record<string, string[]>;
+  experience?: ExperienceItem[];
+  projects?: ProjectItem[];
+  education?: EducationItem[];
+  certifications?: CertificationItem[];
+  is_resume?: boolean;
+  error_message?: string | null;
+}
+
 export interface TailorResumeResponse {
-  tailored_content: any;
+  tailored_content: TailoredContent;
   filename: string;
   pdf_url: string;
 }
@@ -65,6 +118,32 @@ export const apiClient = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Resume tailoring failed');
+    }
+
+    return response.json();
+  },
+
+  async proposeTailorResume(resumeFile: File, jobDescription: string): Promise<TailoredContent> {
+    const formData = new FormData();
+    formData.append('resume_pdf', resumeFile);
+    formData.append('job_description', jobDescription);
+
+    const response = await apiWrapper.post('/resume/tailor-resume/propose', formData);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Resume tailoring analysis failed');
+    }
+
+    return response.json();
+  },
+
+  async generateTailorResume(tailoredContent: TailoredContent): Promise<TailorResumeResponse> {
+    const response = await apiWrapper.post('/resume/tailor-resume/generate', tailoredContent);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Resume tailoring generation failed');
     }
 
     return response.json();

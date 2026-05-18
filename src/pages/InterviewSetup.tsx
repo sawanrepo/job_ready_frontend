@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CreditCard, Loader2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Loader2, Sparkles } from 'lucide-react';
 import { FileUpload } from '@/components/FileUpload';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
@@ -136,8 +136,8 @@ const InterviewSetup: React.FC = () => {
             <main className="max-w-4xl mx-auto px-4 py-12">
 
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold mb-4 font-poppins">
-                        Practice with AI
+                    <h2 className="text-3xl font-bold mb-4 font-poppins flex items-center justify-center gap-2">
+                        Practice with AI <span className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs px-2.5 py-1 rounded-full font-sans uppercase tracking-wider font-semibold border border-purple-300 shadow-sm animate-pulse">Beta</span>
                     </h2>
                     <p className="text-xl text-muted-foreground">
                         Upload your resume and provide the job description to start your 8-question AI-led mock interview
@@ -215,6 +215,23 @@ const InterviewSetup: React.FC = () => {
 
                         </CardContent>
                     </Card>
+                </div>
+
+                <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-5 text-left max-w-2xl mx-auto mb-8 shadow-sm">
+                    <div className="flex gap-3">
+                        <Sparkles className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="text-sm font-semibold text-amber-800 font-poppins flex items-center gap-1.5">
+                                Practice Video Interview — Trial Phase Notice
+                            </h4>
+                            <p className="text-xs text-amber-700/90 mt-1 leading-relaxed">
+                                Please note that our AI-led video mock interviews are currently in a **Trial Phase**. Full identity verification and secure anti-cheating frameworks are scheduled for our upcoming major release.
+                            </p>
+                            <p className="text-xs text-amber-700/90 mt-2 leading-relaxed">
+                                Since this is a simulated practice environment, **we strongly encourage you to conduct the interview honestly and under actual professional constraints**. Cheating or taking external assistance will only lead to inaccurate performance evaluations, misleading analytical reports, and hinder your genuine preparation progress.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="text-center mb-8 space-y-4">
