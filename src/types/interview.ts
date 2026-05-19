@@ -9,6 +9,8 @@ export interface InterviewResponse {
     question_number: number;
     total_questions: number;
     interview_ended: boolean;
+    warnings_count?: number;
+    is_active?: boolean;
 }
 
 export interface InterviewResult {

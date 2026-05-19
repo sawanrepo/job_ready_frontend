@@ -359,6 +359,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             const formData = new FormData();
             formData.append('audio', currentBlob, 'answer.webm');
             formData.append('question_index', currentQuestionIndex.toString());
+            formData.append('retaken', hasRetaken ? 'true' : 'false');
 
             const token = localStorage.getItem('access_token');
             if (!token) throw new Error("Authentication session expired.");
