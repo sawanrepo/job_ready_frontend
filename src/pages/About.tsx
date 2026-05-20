@@ -3,11 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MessageSquare, 
-  Instagram, 
-  Linkedin, 
-  Mail, 
+import {
+  MessageSquare,
+  LifeBuoy,
+  Mail,
   ArrowLeft,
   Target,
   Users,
@@ -18,31 +17,22 @@ import {
 const About = () => {
   const navigate = useNavigate();
 
-  const handleSocialClick = (platform: string) => {
-    // These would be replaced with actual social media URLs
-    const urls = {
-      instagram: 'https://instagram.com/jobready',
-      linkedin: 'https://linkedin.com/company/jobready',
-      email: 'mailto:hello@jobready.com'
-    };
-    
-    if (platform === 'email') {
-      window.location.href = urls.email;
-    } else {
-      window.open(urls[platform as keyof typeof urls], '_blank');
-    }
+  const handleSupport = () => {
+    window.location.href = 'mailto:support@jobreadyai.in?subject=Support Request';
+  };
+
+  const handleContact = () => {
+    window.location.href = 'mailto:contact@jobreadyai.in?subject=Contact Job Ready';
   };
 
   const handleFeedback = () => {
-    // This would open a feedback form or redirect to a feedback system
-    window.open('mailto:feedback@jobready.com?subject=Feedback for Job Ready', '_blank');
+    window.location.href = 'mailto:feedback@jobreadyai.in?subject=Feedback for Job Ready';
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main>
-        {/* Header */}
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container flex h-16 items-center">
             <Button
@@ -59,18 +49,16 @@ const About = () => {
         </header>
 
         <div className="container py-12 space-y-12">
-          {/* Hero Section */}
           <section className="text-center space-y-6">
             <h2 className="text-4xl md:text-5xl font-bold font-poppins gradient-text">
               Empowering Your Career Journey
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Job Ready is your ultimate companion in the competitive job market. We leverage cutting-edge AI 
+              Job Ready is your ultimate companion in the competitive job market. We leverage cutting-edge AI
               to help professionals create standout resumes and increase their chances of landing dream jobs.
             </p>
           </section>
 
-          {/* Product Details */}
           <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="group hover:shadow-md transition-all duration-300">
               <CardHeader className="text-center">
@@ -129,26 +117,50 @@ const About = () => {
             </Card>
           </section>
 
-          {/* Mission Statement */}
           <section className="bg-secondary/30 rounded-2xl p-8 md:p-12 text-center">
             <h3 className="text-3xl font-bold mb-6 font-poppins">Our Mission</h3>
             <p className="text-lg text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-              We believe everyone deserves a fair chance at their dream job. Our mission is to democratize 
-              access to professional resume optimization tools, helping job seekers of all backgrounds 
+              We believe everyone deserves a fair chance at their dream job. Our mission is to democratize
+              access to professional resume optimization tools, helping job seekers of all backgrounds
               compete effectively in today's digital-first hiring landscape.
             </p>
           </section>
 
-          {/* Contact & Social Section */}
           <section className="space-y-8">
             <div className="text-center">
               <h3 className="text-3xl font-bold mb-4 font-poppins">Connect With Us</h3>
               <p className="text-muted-foreground">
-                We'd love to hear from you. Reach out for feedback, questions, or just to say hello!
+                We'd love to hear from you. For support, contact, and feedback, use the dedicated inboxes below.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              <Button
+                onClick={handleSupport}
+                variant="outline"
+                size="lg"
+                className="h-auto p-6 flex flex-col items-center space-y-3 hover:bg-primary/5 transition-colors"
+              >
+                <LifeBuoy className="h-8 w-8 text-primary" />
+                <div className="space-y-1">
+                  <div className="font-semibold">Support</div>
+                  <div className="text-sm text-muted-foreground">support@jobreadyai.in</div>
+                </div>
+              </Button>
+
+              <Button
+                onClick={handleContact}
+                variant="outline"
+                size="lg"
+                className="h-auto p-6 flex flex-col items-center space-y-3 hover:bg-primary/5 transition-colors"
+              >
+                <Mail className="h-8 w-8 text-primary" />
+                <div className="space-y-1">
+                  <div className="font-semibold">Contact</div>
+                  <div className="text-sm text-muted-foreground">contact@jobreadyai.in</div>
+                </div>
+              </Button>
+
               <Button
                 onClick={handleFeedback}
                 variant="outline"
@@ -157,67 +169,27 @@ const About = () => {
               >
                 <MessageSquare className="h-8 w-8 text-primary" />
                 <div className="space-y-1">
-                  <div className="font-semibold">Give Feedback</div>
-                  <div className="text-sm text-muted-foreground">Share your thoughts</div>
-                </div>
-              </Button>
-
-              <Button
-                onClick={() => handleSocialClick('instagram')}
-                variant="outline"
-                size="lg"
-                className="h-auto p-6 flex flex-col items-center space-y-3 hover:bg-primary/5 transition-colors"
-              >
-                <Instagram className="h-8 w-8 text-primary" />
-                <div className="space-y-1">
-                  <div className="font-semibold">Instagram</div>
-                  <div className="text-sm text-muted-foreground">Follow our journey</div>
-                </div>
-              </Button>
-
-              <Button
-                onClick={() => handleSocialClick('linkedin')}
-                variant="outline"
-                size="lg"
-                className="h-auto p-6 flex flex-col items-center space-y-3 hover:bg-primary/5 transition-colors"
-              >
-                <Linkedin className="h-8 w-8 text-primary" />
-                <div className="space-y-1">
-                  <div className="font-semibold">LinkedIn</div>
-                  <div className="text-sm text-muted-foreground">Professional updates</div>
-                </div>
-              </Button>
-
-              <Button
-                onClick={() => handleSocialClick('email')}
-                variant="outline"
-                size="lg"
-                className="h-auto p-6 flex flex-col items-center space-y-3 hover:bg-primary/5 transition-colors"
-              >
-                <Mail className="h-8 w-8 text-primary" />
-                <div className="space-y-1">
-                  <div className="font-semibold">Email Us</div>
-                  <div className="text-sm text-muted-foreground">Direct contact</div>
+                  <div className="font-semibold">Feedback</div>
+                  <div className="text-sm text-muted-foreground">feedback@jobreadyai.in</div>
                 </div>
               </Button>
             </div>
           </section>
 
-          {/* CTA Section */}
           <section className="text-center bg-gradient-to-r from-primary/10 to-secondary/10 rounded-2xl p-8 md:p-12">
             <h3 className="text-3xl font-bold mb-4 font-poppins">Ready to Get Started?</h3>
             <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
               Join thousands of professionals who have transformed their careers with Job Ready.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
+              <Button
                 onClick={() => navigate('/register')}
                 size="lg"
                 className="gradient-primary hover:shadow-glow transition-all duration-300"
               >
                 Get Started Free
               </Button>
-              <Button 
+              <Button
                 onClick={() => navigate('/login')}
                 variant="outline"
                 size="lg"

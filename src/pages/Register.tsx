@@ -66,7 +66,7 @@ const Register = () => {
     <div className="min-h-screen flex items-center justify-center p-4 gradient-hero">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2 font-poppins">Join Job Ready</h1>
+          <img src="/logo.png" alt="Job Ready" className="mx-auto h-24 w-auto object-contain mb-3 rounded-lg bg-white/95 px-4 py-2 shadow-soft" />
           <p className="text-white/80 text-lg">Build a career that stands out</p>
         </div>
         

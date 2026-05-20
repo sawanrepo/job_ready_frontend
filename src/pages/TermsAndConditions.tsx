@@ -209,8 +209,8 @@ const TermsAndConditions: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">19. Contact Information</h2>
-              <p className="text-muted-foreground">For questions, support requests, or legal inquiries regarding these Terms, contact:</p>
-              <p className="font-semibold text-primary">Email: [leave for now]</p>
+              <p className="text-muted-foreground">For questions or legal inquiries regarding these Terms, contact us at <a href="mailto:contact@jobreadyai.in" className="text-primary font-semibold hover:underline">contact@jobreadyai.in</a>. For support requests, email <a href="mailto:support@jobreadyai.in" className="text-primary font-semibold hover:underline">support@jobreadyai.in</a>.</p>
+              <p className="font-semibold text-primary">Feedback: <a href="mailto:feedback@jobreadyai.in" className="hover:underline">feedback@jobreadyai.in</a></p>
             </section>
           </div>
         </div>

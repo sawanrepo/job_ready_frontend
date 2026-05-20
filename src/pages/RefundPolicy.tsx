@@ -49,7 +49,7 @@ const RefundPolicy: React.FC = () => {
                 <li>A test mode payment message does not mean a live purchase was completed.</li>
                 <li>Once live payment mode is enabled, credits are added only after successful payment verification.</li>
               </ul>
-              <p className="text-muted-foreground mt-4">If you believe a live payment was completed but credits were not added, contact support with the registered email address and Razorpay payment or order ID.</p>
+              <p className="text-muted-foreground mt-4">If you believe a live payment was completed but credits were not added, email support@jobreadyai.in from your registered email address with the Razorpay payment or order ID.</p>
             </section>
 
             <section>
@@ -101,7 +101,7 @@ const RefundPolicy: React.FC = () => {
             <section>
               <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">10. Contact</h2>
               <p className="text-muted-foreground mb-4">For support related to payments or refund requests, contact:</p>
-              <p className="font-semibold text-primary">Email: [YOUR SUPPORT EMAIL]</p>
+              <p className="font-semibold text-primary">Email: <a href="mailto:support@jobreadyai.in" className="hover:underline">support@jobreadyai.in</a></p>
               <p className="text-sm text-muted-foreground mt-2 italic">Please include: registered email address, payment reference or order ID, and a description of the issue.</p>
             </section>
           </div>

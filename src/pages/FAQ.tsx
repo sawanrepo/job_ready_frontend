@@ -74,7 +74,7 @@ const FAQ = () => {
     },
     {
       question: "What should I do if payment succeeds but credits are not added?",
-      answer: "Please note the payment or order ID shown by Razorpay and contact support from the same registered email address. If the issue is caused by Job Ready or payment verification, we will investigate and may add credits or restore access after verification.",
+      answer: "Please note the payment or order ID shown by Razorpay and email support@jobreadyai.in from the same registered email address. If the issue is caused by Job Ready or payment verification, we will investigate and may add credits or restore access after verification.",
     },
     {
       question: "Can I get a refund after using a credit?",
@@ -94,7 +94,7 @@ const FAQ = () => {
     },
     {
       question: "Are interview warnings reversible?",
-      answer: "Warnings are generated from interview activity such as fullscreen exit or tab changes. They are not automatically reversible during the session. If you believe a technical issue caused a warning, contact support with details after the session.",
+      answer: "Warnings are generated from interview activity such as fullscreen exit or tab changes. They are not automatically reversible during the session. If you believe a technical issue caused a warning, email support@jobreadyai.in with details after the session.",
     },
     {
       question: "Does Job Ready guarantee a job or interview call?",
@@ -143,7 +143,7 @@ const FAQ = () => {
             Frequently Asked Questions
           </h2>
           <p className="text-xl text-muted-foreground">
-            Find answers to common questions about Job Ready
+            Find answers to common questions about Job Ready. For support, email support@jobreadyai.in.
           </p>
         </div>
 

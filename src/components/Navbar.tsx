@@ -1,22 +1,22 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  LayoutDashboard, 
-  History, 
-  ShoppingBag, 
-  Settings, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  History,
+  ShoppingBag,
+  Settings,
+  LogOut,
   User,
   ChevronRight
 } from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
@@ -35,18 +35,13 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-        {/* Logo */}
-        <div 
-          className="flex items-center gap-2 cursor-pointer group" 
+        <div
+          className="flex items-center cursor-pointer group min-w-0"
           onClick={() => navigate('/dashboard')}
         >
-          <div className="bg-primary p-1.5 rounded-lg group-hover:rotate-12 transition-transform shadow-glow">
-            <Rocket className="h-5 w-5 text-white" />
-          </div>
-          <h1 className="text-xl font-bold text-gradient font-poppins">Job Ready</h1>
+          <img src="/logo.png" alt="Job Ready" className="h-11 w-auto max-w-[170px] sm:max-w-[220px] object-contain" />
         </div>
 
-        {/* Desktop Nav */}
         <nav className="hidden md:flex items-center space-x-1">
           {navItems.map((item) => (
             <Button
@@ -55,9 +50,9 @@ const Navbar = () => {
               size="sm"
               onClick={() => navigate(item.path)}
               className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 rounded-lg ${
-                isActive(item.path) 
-                  ? 'bg-primary/10 text-primary font-semibold' 
-                  : item.highlight 
+                isActive(item.path)
+                  ? 'bg-primary/10 text-primary font-semibold'
+                  : item.highlight
                     ? 'text-orange-600 hover:bg-orange-50 font-medium'
                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
               }`}
@@ -71,7 +66,6 @@ const Navbar = () => {
           ))}
         </nav>
 
-        {/* User Menu */}
         <div className="flex items-center space-x-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -89,7 +83,7 @@ const Navbar = () => {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-primary/5" />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => navigate('/settings')}
                 className="rounded-lg cursor-pointer focus:bg-primary/5 py-2.5"
               >
@@ -97,7 +91,7 @@ const Navbar = () => {
                 <span>Settings</span>
                 <ChevronRight className="ml-auto h-3 w-3 text-muted-foreground opacity-50" />
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={logout}
                 className="rounded-lg cursor-pointer focus:bg-destructive/5 text-destructive py-2.5"
               >
@@ -112,5 +106,4 @@ const Navbar = () => {
   );
 };
 
-import { Rocket } from 'lucide-react';
 export default Navbar;
