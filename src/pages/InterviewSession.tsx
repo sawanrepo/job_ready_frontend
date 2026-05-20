@@ -27,6 +27,7 @@ const InterviewSession: React.FC = () => {
     const [recordingTimeLeft, setRecordingTimeLeft] = useState(180); // 3 minutes total
     const [currentRecordingTime, setCurrentRecordingTime] = useState(0); // Time spent in current recording
     const [hasRetaken, setHasRetaken] = useState(false);
+    const [isQuestionExpired, setIsQuestionExpired] = useState(false);
 
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -36,15 +37,28 @@ const InterviewSession: React.FC = () => {
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const autoSubmitAfterStopRef = useRef(false);
 
+    const attachStreamToVideo = async (stream: MediaStream) => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (video.srcObject !== stream) {
+            video.srcObject = stream;
+        }
+
+        try {
+            await video.play();
+        } catch (err) {
+            console.error("Video preview play failed:", err);
+        }
+    };
+
     // Initialize Camera & Fetch Session if missing
     useEffect(() => {
         const startCamera = async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 streamRef.current = stream;
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                }
+                await attachStreamToVideo(stream);
             } catch (err) {
                 console.error("Error accessing camera:", err);
                 alert("Camera/Microphone access is required for the interview.");
@@ -63,13 +77,18 @@ const InterviewSession: React.FC = () => {
             }
 
             try {
-                const response = await apiWrapper.get(`/interview/session/${sessionId}`);
+                const response = location.state?.resumeGraceRequested
+                    ? await apiWrapper.post(`/interview/${sessionId}/resume-grace`)
+                    : await apiWrapper.get(`/interview/session/${sessionId}`);
                 
                 if (!response.ok) throw new Error("Session not found");
                 
                 const data = await response.json();
                 setQuestionData(data);
                 setWarnings(data.warnings_count || 0);
+                if (location.state?.resumeGraceRequested) {
+                    navigate(location.pathname, { replace: true, state: { ...location.state, resumeGraceRequested: false } });
+                }
                 if (data.is_active === false) {
                     setIsMalpractice(true);
                 }
@@ -103,7 +122,15 @@ const InterviewSession: React.FC = () => {
                 document.exitFullscreen().catch(() => { });
             }
         };
-    }, [sessionId, questionData, navigate]);
+    }, [sessionId, navigate]);
+
+    useEffect(() => {
+        if (!hasStartedSession || videoUrl) return;
+        const stream = streamRef.current;
+        if (stream && stream.getTracks().every(t => t.readyState === 'live')) {
+            attachStreamToVideo(stream);
+        }
+    }, [hasStartedSession, videoUrl, questionData]);
 
     const reenterFullscreen = async () => {
         try {
@@ -199,18 +226,16 @@ const InterviewSession: React.FC = () => {
                         autoSubmitAfterStopRef.current = true;
                         stopRecording();
                     } else {
-                        // If they aren't recording yet, auto-submit whatever is in chunksRef
                         if (chunksRef.current.length > 0) {
                             submitResponse();
                         } else {
+                            setIsQuestionExpired(true);
                             toast({
                                 variant: "destructive",
                                 title: "Time Limit Reached",
-                                description: "You did not submit an answer in time. Moving to the next question."
+                                description: "No answer was recorded. Moving to the next question."
                             });
-                            // Force next question by skipping or handling empty submit
-                            chunksRef.current = [new Blob([], { type: 'video/webm' })];
-                            submitResponse();
+                            skipQuestion("Candidate failed to answer this question within the time limit.");
                         }
                     }
                     return 0;
@@ -246,6 +271,7 @@ const InterviewSession: React.FC = () => {
 
     const ensureStream = async () => {
         if (streamRef.current && streamRef.current.getTracks().every(t => t.readyState === 'live')) {
+            await attachStreamToVideo(streamRef.current);
             return streamRef.current;
         }
         
@@ -253,9 +279,7 @@ const InterviewSession: React.FC = () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
+            await attachStreamToVideo(stream);
             return stream;
         } catch (err) {
             console.error("Failed to re-initialize camera:", err);
@@ -269,6 +293,20 @@ const InterviewSession: React.FC = () => {
     };
 
     const startRecording = async () => {
+        if (isQuestionExpired) {
+            toast({
+                variant: "destructive",
+                title: "Time Limit Reached",
+                description: "This question's time has expired."
+            });
+            return;
+        }
+
+        if (!document.fullscreenElement) {
+            await reenterFullscreen();
+            return;
+        }
+
         if (videoUrl) {
             if (hasRetaken) {
                 toast({
@@ -352,6 +390,18 @@ const InterviewSession: React.FC = () => {
 
     const submitResponseDirect = async (blobToSubmit: Blob) => {
         if (!sessionId) return;
+        if (blobToSubmit.size === 0) {
+            toast({
+                variant: "destructive",
+                title: "No Recording Found",
+                description: "Please record an answer before submitting."
+            });
+            return;
+        }
+        if (!document.fullscreenElement) {
+            await reenterFullscreen();
+            return;
+        }
 
         setIsProcessing(true);
         const formData = new FormData();
@@ -393,12 +443,56 @@ const InterviewSession: React.FC = () => {
                 setVideoUrl(null);
                 setRecordingTimeLeft(180); // Reset timer to 3 mins
                 setHasRetaken(false); // Reset retake flag
+                setIsQuestionExpired(false);
             }
         } catch (error) {
             console.error(error);
             toast({
                 title: "Upload Failed",
                 description: error instanceof Error ? error.message : "Error submitting response. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const applyInterviewResponse = (result: InterviewResponse) => {
+        if (result.interview_ended) {
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => { });
+            }
+            navigate(`/interview/results/${sessionId}`);
+        } else {
+            setQuestionData(result);
+            chunksRef.current = [];
+            setVideoUrl(null);
+            setRecordingTimeLeft(180);
+            setHasRetaken(false);
+            setIsQuestionExpired(false);
+        }
+    };
+
+    const skipQuestion = async (reason: string) => {
+        if (!sessionId || isProcessing) return;
+
+        setIsProcessing(true);
+        const formData = new FormData();
+        formData.append('reason', reason);
+
+        try {
+            const response = await apiWrapper.post(`/interview/${sessionId}/skip`, formData);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || "Could not move to the next question.");
+            }
+            const result: InterviewResponse = await response.json();
+            applyInterviewResponse(result);
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: "Question Skip Failed",
+                description: error instanceof Error ? error.message : "Could not move to the next question. Please try again.",
                 variant: "destructive"
             });
         } finally {
@@ -520,7 +614,12 @@ const InterviewSession: React.FC = () => {
                                     setIsFullscreen(true);
                                     setHasStartedSession(true);
                                 } catch (err) {
-                                    setHasStartedSession(true);
+                                    setIsFullscreen(false);
+                                    toast({
+                                        variant: "destructive",
+                                        title: "Fullscreen Required",
+                                        description: "Please allow fullscreen mode to start the interview."
+                                    });
                                 }
                             }}
                         >
@@ -573,12 +672,17 @@ const InterviewSession: React.FC = () => {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle>Question {questionData.question_number} / {questionData.total_questions}</CardTitle>
-                            {recordingTimeLeft < 30 && (
-                                <div className="flex items-center gap-2 text-red-500 font-mono font-bold animate-pulse">
-                                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                                    {formatTime(recordingTimeLeft)}
+                            <div className="flex items-center gap-2">
+                                <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${warnings >= 4 ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                                    Warnings: {warnings}/5
                                 </div>
-                            )}
+                                {recordingTimeLeft < 30 && (
+                                    <div className="flex items-center gap-2 text-red-500 font-mono font-bold animate-pulse">
+                                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                                        {formatTime(recordingTimeLeft)}
+                                    </div>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-lg font-medium">{questionData.question}</p>

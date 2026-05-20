@@ -155,7 +155,7 @@ const InterviewSetup: React.FC = () => {
                                 <CardDescription>You have an active session from {new Date(activeSessions[0].created_at).toLocaleString()}</CardDescription>
                             </div>
                             <Button 
-                                onClick={() => navigate(`/interview/session/${activeSessions[0].id}`)}
+                                onClick={() => navigate(`/interview/session/${activeSessions[0].id}`, { state: { resumeGraceRequested: true } })}
                                 className="gradient-primary"
                             >
                                 Resume (Question {activeSessions[0].question_number})

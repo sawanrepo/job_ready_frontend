@@ -42,6 +42,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const resultPollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const resultPollAttemptsRef = useRef(0);
+    const autoSubmitAfterStopRef = useRef(false);
 
     const getAudioFilename = (blob: Blob) => {
         const mimeType = blob.type.split(';')[0];
@@ -246,8 +247,14 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             setRecordingTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timerIntervalRef.current!);
-                    if (isRecording) stopRecording();
-                    handleNextQuestion(); // Auto-submit or skip? User said "under which he has to read question + record answer"
+                    if (isRecording) {
+                        autoSubmitAfterStopRef.current = true;
+                        stopRecording();
+                    } else if (currentBlob) {
+                        handleNextQuestion();
+                    } else {
+                        skipCurrentQuestion("Candidate failed to answer this question within the time limit.");
+                    }
                     return 0;
                 }
                 return prev - 1;
@@ -271,7 +278,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
         return () => {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         };
-    }, [currentQuestionIndex, isMalpractice, isProcessing, isUploading, isRecording, hasStartedSession, isFullscreen]);
+    }, [currentQuestionIndex, currentBlob, isMalpractice, isProcessing, isUploading, isRecording, hasStartedSession, isFullscreen]);
 
 
     const ensureStream = async () => {
@@ -289,6 +296,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     };
 
     const startRecording = async () => {
+        if (!document.fullscreenElement) {
+            await reenterFullscreen();
+            return;
+        }
+
         if (currentAudioUrl) {
             if (hasRetaken) {
                 toast({
@@ -351,6 +363,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 setCurrentAudioUrl(url);
                 setIsRecording(false);
                 if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
+                if (autoSubmitAfterStopRef.current) {
+                    autoSubmitAfterStopRef.current = false;
+                    handleNextQuestionWithBlob(blob);
+                }
             };
 
             mediaRecorder.start(200);
@@ -367,8 +384,21 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
 
-    const handleNextQuestion = async () => {
-        if (!currentBlob || !sessionId) {
+    const advanceAfterAnswer = async () => {
+        if (currentQuestionIndex < totalQuestions - 1) {
+            setCurrentQuestionIndex(prev => prev + 1);
+            setCurrentAudioUrl(null);
+            setCurrentBlob(null);
+            setRecordingTimeLeft(150);
+            setHasRetaken(false);
+            currentChunksRef.current = [];
+        } else {
+            await submitInterview();
+        }
+    };
+
+    const handleNextQuestionWithBlob = async (blob: Blob | null) => {
+        if (!blob || !sessionId) {
             toast({
                 variant: "destructive",
                 title: "Error",
@@ -376,11 +406,15 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             });
             return;
         }
+        if (blob.size === 0) {
+            await skipCurrentQuestion("Candidate failed to answer this question within the time limit.");
+            return;
+        }
 
         setIsUploading(true);
         try {
             const formData = new FormData();
-            formData.append('audio', currentBlob, getAudioFilename(currentBlob));
+            formData.append('audio', blob, getAudioFilename(blob));
             formData.append('question_index', currentQuestionIndex.toString());
             formData.append('retaken', hasRetaken ? 'true' : 'false');
 
@@ -391,23 +425,50 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 throw new Error(errData.detail || "Failed to upload answer");
             }
 
-            // Successfully uploaded
-            if (currentQuestionIndex < totalQuestions - 1) {
-                setCurrentQuestionIndex(prev => prev + 1);
-                setCurrentAudioUrl(null);
-                setCurrentBlob(null);
-                setRecordingTimeLeft(150);
-                setHasRetaken(false);
-                currentChunksRef.current = [];
-            } else {
-                await submitInterview();
-            }
+            await advanceAfterAnswer();
         } catch (error: any) {
             console.error("Answer submission error:", error);
             toast({
                 variant: "destructive",
                 title: error.message === UNSUPPORTED_AUDIO_FORMAT_MESSAGE ? "Unsupported Browser" : "Upload Failed",
                 description: error.message || "Failed to save your answer. Please try again."
+            });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleNextQuestion = async () => {
+        await handleNextQuestionWithBlob(currentBlob);
+    };
+
+    const skipCurrentQuestion = async (reason: string) => {
+        if (!sessionId || isUploading) return;
+
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('question_index', currentQuestionIndex.toString());
+            formData.append('reason', reason);
+
+            const response = await apiWrapper.post(`/interview/audio/${sessionId}/skip`, formData);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || "Could not move to the next question.");
+            }
+
+            toast({
+                variant: "destructive",
+                title: "Time Limit Reached",
+                description: "No answer was recorded. Moving to the next question."
+            });
+            await advanceAfterAnswer();
+        } catch (error: any) {
+            console.error("Question skip error:", error);
+            toast({
+                variant: "destructive",
+                title: "Question Skip Failed",
+                description: error.message || "Could not move to the next question. Please try again."
             });
         } finally {
             setIsUploading(false);
@@ -574,7 +635,12 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                                     setIsFullscreen(true);
                                     setHasStartedSession(true);
                                 } catch (err) {
-                                    setHasStartedSession(true);
+                                    setIsFullscreen(false);
+                                    toast({
+                                        variant: "destructive",
+                                        title: "Fullscreen Required",
+                                        description: "Please allow fullscreen mode to start the interview."
+                                    });
                                 }
                             }}
                         >
