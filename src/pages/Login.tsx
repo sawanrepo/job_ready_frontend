@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,7 @@ const Login = () => {
   const { login, googleLogin, initiateGoogleLogin, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const handledGoogleCodeRef = useRef<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,15 +53,26 @@ const Login = () => {
   // Handle OAuth redirect
   useEffect(() => {
     const code = searchParams.get('code');
-    if (code) {
-      setIsGoogleLoading(true);
-      googleLogin(code).then((success) => {
-        if (success) {
-          navigate('/dashboard', { replace: true });
-        }
-        setIsGoogleLoading(false);
-      });
+    if (!code) return;
+
+    const codeKey = `google_oauth_code_${code}`;
+    if (handledGoogleCodeRef.current === code || sessionStorage.getItem(codeKey)) {
+      window.history.replaceState(null, '', '/login');
+      return;
     }
+
+    handledGoogleCodeRef.current = code;
+    sessionStorage.setItem(codeKey, 'processing');
+    window.history.replaceState(null, '', '/login');
+
+    setIsGoogleLoading(true);
+    googleLogin(code).then((success) => {
+      if (success) {
+        navigate('/dashboard', { replace: true });
+      }
+    }).finally(() => {
+      setIsGoogleLoading(false);
+    });
   }, [searchParams, googleLogin, navigate]);
 
   return (
