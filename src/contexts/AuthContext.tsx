@@ -19,7 +19,7 @@ interface AuthContextType {
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<boolean>;
   updateProfile: (fullName: string) => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
-  googleLogin: (code: string) => Promise<boolean>;
+  googleLogin: (code: string, redirectUri?: string) => Promise<boolean>;
   initiateGoogleLogin: () => void;
   logout: () => void;
   isAuthenticated: boolean;
@@ -413,7 +413,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const googleLogin = async (code: string): Promise<boolean> => {
+  const googleLogin = async (code: string, redirectUri?: string): Promise<boolean> => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/google-auth`, {
         method: 'POST',
@@ -421,7 +421,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, redirect_uri: redirectUri }),
       });
 
       if (response.ok) {

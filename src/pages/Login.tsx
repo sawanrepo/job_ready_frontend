@@ -66,7 +66,7 @@ const Login = () => {
     window.history.replaceState(null, '', '/login');
 
     setIsGoogleLoading(true);
-    googleLogin(code).then((success) => {
+    googleLogin(code, `${window.location.origin}/login`).then((success) => {
       if (success) {
         navigate('/dashboard', { replace: true });
       }
