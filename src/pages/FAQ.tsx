@@ -64,6 +64,42 @@ const FAQ = () => {
       question: "Do I need a camera for all interviews?",
       answer: "No. While the Mock Interview requires a camera for full video analysis, the Rapid Fire Interview is audio-only and only requires a working microphone. You can choose the format that best suits your practice needs.",
     },
+    {
+      question: "How do credits work?",
+      answer: "Credits are feature-specific. ATS credits are used for ATS checks, resume tailoring credits are used for tailoring, audio interview credits are used for Rapid Fire interviews, and video interview credits are used for video mock interviews. Credits are deducted when a feature starts processing.",
+    },
+    {
+      question: "When are purchased credits added to my account?",
+      answer: "Purchased credits are added only after the payment is verified successfully by Razorpay and Job Ready confirms that.",
+    },
+    {
+      question: "What should I do if payment succeeds but credits are not added?",
+      answer: "Please note the payment or order ID shown by Razorpay and contact support from the same registered email address. If the issue is caused by Job Ready or payment verification, we will investigate and may add credits or restore access after verification.",
+    },
+    {
+      question: "Can I get a refund after using a credit?",
+      answer: "Credits used for completed digital services are generally non-refundable because AI processing starts immediately. If a technical issue on Job Ready prevents completion after a credit is deducted, we may restore the credit after reviewing the issue.",
+    },
+    {
+      question: "What happens if I run out of time during a video interview question?",
+      answer: "If you recorded an answer, the system will submit the available recording when time expires. If you did not record anything, the question is marked as not answered within the time limit and the interview continues to the next question.",
+    },
+    {
+      question: "What happens if I disconnect during an interview?",
+      answer: "You can resume an unfinished active session from the interview setup page. Video interviews may provide limited resume grace for genuine interruptions, but refreshing repeatedly will not continuously extend your timer.",
+    },
+    {
+      question: "Why is fullscreen required during interviews?",
+      answer: "Fullscreen mode helps maintain a focused practice environment. Exiting fullscreen, switching tabs, or similar activity may trigger warnings. Too many warnings can end the interview and prevent result generation.",
+    },
+    {
+      question: "Are interview warnings reversible?",
+      answer: "Warnings are generated from interview activity such as fullscreen exit or tab changes. They are not automatically reversible during the session. If you believe a technical issue caused a warning, contact support with details after the session.",
+    },
+    {
+      question: "Does Job Ready guarantee a job or interview call?",
+      answer: "No. Job Ready provides preparation tools, feedback, resume analysis, and practice interviews. Hiring decisions depend on employers, market conditions, your profile, and many factors outside the platform.",
+    },
   ];
 
   const features = [

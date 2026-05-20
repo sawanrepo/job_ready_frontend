@@ -34,7 +34,7 @@ const InterviewSession: React.FC = () => {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const chunksRef = useRef<Blob[]>([]);
-    const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const autoSubmitAfterStopRef = useRef(false);
 
     const attachStreamToVideo = async (stream: MediaStream) => {
@@ -80,9 +80,9 @@ const InterviewSession: React.FC = () => {
                 const response = location.state?.resumeGraceRequested
                     ? await apiWrapper.post(`/interview/${sessionId}/resume-grace`)
                     : await apiWrapper.get(`/interview/session/${sessionId}`);
-                
+
                 if (!response.ok) throw new Error("Session not found");
-                
+
                 const data = await response.json();
                 setQuestionData(data);
                 setWarnings(data.warnings_count || 0);
@@ -152,12 +152,12 @@ const InterviewSession: React.FC = () => {
         const handleWarning = async (reason: string) => {
             try {
                 const response = await apiWrapper.post(`/interview/${sessionId}/warning`);
-                
+
                 if (!response.ok) throw new Error("Failed to report warning");
-                
+
                 const data = await response.json();
                 setWarnings(data.warnings_count);
-                
+
                 if (data.warnings_count >= 5 || data.is_active === false) {
                     setIsMalpractice(true);
                     toast({
@@ -274,7 +274,7 @@ const InterviewSession: React.FC = () => {
             await attachStreamToVideo(streamRef.current);
             return streamRef.current;
         }
-        
+
         // Re-initialize if stream is dead or tracks stopped
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -522,8 +522,8 @@ const InterviewSession: React.FC = () => {
                         <p className="text-sm text-muted-foreground">
                             No results will be generated for this session. Please maintain focus in your next attempt.
                         </p>
-                        <Button 
-                            className="w-full bg-red-600 hover:bg-red-700 text-white shadow-glow-sm" 
+                        <Button
+                            className="w-full bg-red-600 hover:bg-red-700 text-white shadow-glow-sm"
                             onClick={() => navigate('/dashboard')}
                         >
                             Return to Dashboard
@@ -593,8 +593,8 @@ const InterviewSession: React.FC = () => {
 
                         <div className="bg-secondary/50 p-4 rounded-lg border border-dashed border-primary/30 mt-6">
                             <label className="flex items-center gap-3 cursor-pointer group">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     className="w-5 h-5 rounded border-primary text-primary focus:ring-primary cursor-pointer"
                                     checked={hasAgreedToRules}
                                     onChange={(e) => setHasAgreedToRules(e.target.checked)}
@@ -605,8 +605,8 @@ const InterviewSession: React.FC = () => {
                             </label>
                         </div>
 
-                        <Button 
-                            className="w-full gradient-primary py-7 text-xl font-bold shadow-glow-sm" 
+                        <Button
+                            className="w-full gradient-primary py-7 text-xl font-bold shadow-glow-sm"
                             disabled={!hasAgreedToRules || !questionData}
                             onClick={async () => {
                                 try {
@@ -650,8 +650,8 @@ const InterviewSession: React.FC = () => {
                         <p className="text-muted-foreground">
                             Full-screen mode is mandatory for this interview. Please return to full-screen to resume.
                         </p>
-                        <Button 
-                            className="w-full gradient-primary" 
+                        <Button
+                            className="w-full gradient-primary"
                             onClick={reenterFullscreen}
                         >
                             Resume Interview (Re-enter Full Screen)
@@ -694,7 +694,7 @@ const InterviewSession: React.FC = () => {
                                     </span>
                                 </div>
                                 <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                         className={`h-full transition-all duration-1000 ${recordingTimeLeft < 30 ? 'bg-red-500 animate-pulse' : 'bg-primary'}`}
                                         style={{ width: `${(recordingTimeLeft / 180) * 100}%` }}
                                     ></div>

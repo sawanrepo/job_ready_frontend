@@ -39,8 +39,8 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const currentChunksRef = useRef<BlobPart[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
-    const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const resultPollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const resultPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resultPollAttemptsRef = useRef(0);
     const autoSubmitAfterStopRef = useRef(false);
 

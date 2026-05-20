@@ -2,6 +2,14 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   ShoppingBag, 
   Zap, 
@@ -13,10 +21,11 @@ import {
   TrendingUp, 
   Rocket, 
   Crown,
-  CreditCard
+  CreditCard,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
-import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 
@@ -35,7 +44,22 @@ interface PackItem {
 
 const Shop = () => {
   const [loading, setLoading] = useState<string | null>(null);
+  const [paymentDialog, setPaymentDialog] = useState<{
+    open: boolean;
+    status: 'success' | 'error';
+    title: string;
+    message: string;
+  }>({
+    open: false,
+    status: 'success',
+    title: '',
+    message: '',
+  });
   const { user } = useAuth();
+
+  const showPaymentDialog = (status: 'success' | 'error', title: string, message: string) => {
+    setPaymentDialog({ open: true, status, title, message });
+  };
 
   const individualPacks: PackItem[] = [
     {
@@ -142,16 +166,17 @@ const Shop = () => {
               ...response,
               plan_name: packId
             });
-            toast({
-              title: "Purchase successful!",
-              description: "Your credits have been added to your account.",
-            });
-          } catch (error) {
-            toast({
-              variant: "destructive",
-              title: "Verification failed",
-              description: "Something went wrong with payment verification.",
-            });
+            showPaymentDialog(
+              'success',
+              'Credits Added Successfully',
+              'Your purchased credits have been added to your account.'
+            );
+          } catch (error: any) {
+            showPaymentDialog(
+              'error',
+              'Credits Not Added',
+              `Failed to add credits due to: ${error.message || 'Something went wrong with payment verification.'}`
+            );
           }
         },
         prefill: {
@@ -166,11 +191,11 @@ const Shop = () => {
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Order creation failed",
-        description: error.message || "Could not initiate payment.",
-      });
+      showPaymentDialog(
+        'error',
+        'Order Creation Failed',
+        error.message || 'Could not initiate payment.'
+      );
     } finally {
       setLoading(null);
     }
@@ -307,6 +332,34 @@ const Shop = () => {
           </p>
         </div>
       </div>
+      <Dialog
+        open={paymentDialog.open}
+        onOpenChange={(open) => setPaymentDialog((current) => ({ ...current, open }))}
+      >
+        <DialogContent className="sm:max-w-md text-center">
+          <DialogHeader className="items-center text-center">
+            <div className={`mb-2 flex h-14 w-14 items-center justify-center rounded-full ${paymentDialog.status === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
+              {paymentDialog.status === 'success' ? (
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              ) : (
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              )}
+            </div>
+            <DialogTitle className="font-poppins text-2xl">{paymentDialog.title}</DialogTitle>
+            <DialogDescription className="text-center text-base leading-relaxed">
+              {paymentDialog.message}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button
+              className="min-w-[120px] gradient-primary"
+              onClick={() => setPaymentDialog((current) => ({ ...current, open: false }))}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

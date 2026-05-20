@@ -9,8 +9,8 @@ const TermsAndConditions: React.FC = () => {
       <main className="flex-1 max-w-4xl mx-auto px-4 py-12 w-full">
         <div className="bg-white rounded-2xl shadow-strong p-8 md:p-12 overflow-hidden border border-primary/10">
           <h1 className="text-3xl font-bold mb-2 font-poppins text-primary">Terms and Conditions – Job Ready</h1>
-          <p className="text-muted-foreground mb-8">Last Updated: May 12, 2026</p>
-          
+          <p className="text-muted-foreground mb-8">Last Updated: May 20, 2026</p>
+
           <div className="prose prose-slate max-w-none space-y-8">
             <p className="text-lg leading-relaxed">
               Welcome to Job Ready. These Terms and Conditions (“Terms”) govern your access to and use of the Job Ready platform and services. By accessing or using Job Ready, you agree to be bound by these Terms. If you do not agree with these Terms, please do not use the platform.
@@ -122,7 +122,32 @@ const TermsAndConditions: React.FC = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">9. Acceptable Use</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">9. Payment Verification and Credit Activation</h2>
+              <p className="text-muted-foreground mb-4">Job Ready adds purchased credits only after payment verification is completed successfully through the payment gateway and the transaction is confirmed as valid.</p>
+              <p className="text-muted-foreground mb-2 font-semibold">Users acknowledge that:</p>
+              <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
+                <li>payment completion screens from third-party gateways do not by themselves guarantee credit activation,</li>
+                <li>credits are added only after Job Ready verifies the payment signature, amount, currency, order ownership, and successful capture status,</li>
+                <li>credit activation may be delayed or blocked if verification is incomplete, disputed, duplicated, suspicious, or unverifiable,</li>
+                <li>Job Ready may reject or reverse credit allocation for fraudulent, replayed, manipulated, or invalid payment transactions.</li>
+              </ul>
+              <p className="text-muted-foreground mt-4">Users must not replay payment IDs, manipulate payment verification data, or attempt to obtain credits without a valid confirmed payment.</p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">10. Interview Rules, Warnings, and Session Integrity</h2>
+              <p className="text-muted-foreground mb-4">Interview features are intended for honest practice under realistic constraints. Video and audio interviews may enforce timers, recording limits, fullscreen requirements, warning counts, and malpractice checks.</p>
+              <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
+                <li>Exiting fullscreen, switching tabs, or similar activity may generate warnings.</li>
+                <li>Too many warnings may terminate the interview and prevent result generation.</li>
+                <li>If a question is not answered within the time limit, Job Ready may mark it as unanswered and continue the interview flow.</li>
+                <li>Resume or recovery grace, if provided, may be limited and may not reset repeatedly on refresh.</li>
+              </ul>
+              <p className="text-muted-foreground mt-4">Job Ready may restrict or discard sessions where abuse, automation, manipulation, or repeated policy violations are detected.</p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">11. Acceptable Use</h2>
               <p className="text-muted-foreground mb-2">Users agree not to:</p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
                 <li>misuse or abuse the platform,</li>
@@ -139,12 +164,12 @@ const TermsAndConditions: React.FC = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">10. Third-Party Services</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">12. Third-Party Services</h2>
               <p className="text-muted-foreground">Job Ready may rely on third-party providers including AI model providers, authentication services, payment gateways, cloud infrastructure providers, and analytics or monitoring services. Job Ready is not responsible for outages, delays, inaccuracies, or failures caused by third-party services.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">11. Service Availability</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">13. Service Availability</h2>
               <p className="text-muted-foreground mb-4">Job Ready aims to provide reliable and uninterrupted service; however, uninterrupted availability is not guaranteed.</p>
               <p className="text-muted-foreground mb-2">The platform may experience:</p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
@@ -158,32 +183,32 @@ const TermsAndConditions: React.FC = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">12. Intellectual Property</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">14. Intellectual Property</h2>
               <p className="text-muted-foreground">All platform software, code, branding, logos, design elements, interfaces, and proprietary functionality belong to Job Ready unless otherwise stated. Users may not copy, distribute, resell, reproduce, reverse engineer, or commercially exploit any part of the platform without written permission.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">13. Limitation of Liability</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">15. Limitation of Liability</h2>
               <p className="text-muted-foreground">To the maximum extent permitted by law, Job Ready shall not be liable for hiring or recruitment outcomes, job application results, career losses, indirect or consequential damages, AI-generated inaccuracies, loss of uploaded or generated data, temporary service interruptions, or third-party service failures. The platform is provided on an “as is” and “as available” basis without warranties of any kind.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">14. Account Suspension or Termination</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">16. Account Suspension or Termination</h2>
               <p className="text-muted-foreground">Job Ready reserves the right to suspend, restrict, or terminate accounts that violate these Terms, engage in abuse or fraudulent activity, create security risks, misuse AI systems or platform infrastructure, or violate applicable laws. Job Ready may also remove uploaded content associated with such accounts.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">15. Modifications to Services or Terms</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">17. Modifications to Services or Terms</h2>
               <p className="text-muted-foreground">Job Ready may modify, update, suspend, or discontinue any part of the platform or these Terms at any time. Continued use of the platform after updates constitutes acceptance of the revised Terms.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">16. Governing Law</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">18. Governing Law</h2>
               <p className="text-muted-foreground">These Terms shall be governed by and interpreted in accordance with the laws of India. Any disputes arising in relation to these Terms shall be subject to the jurisdiction of competent courts in India.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">17. Contact Information</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">19. Contact Information</h2>
               <p className="text-muted-foreground">For questions, support requests, or legal inquiries regarding these Terms, contact:</p>
               <p className="font-semibold text-primary">Email: [leave for now]</p>
             </section>

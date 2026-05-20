@@ -9,8 +9,8 @@ const RefundPolicy: React.FC = () => {
       <main className="flex-1 max-w-4xl mx-auto px-4 py-12 w-full">
         <div className="bg-white rounded-2xl shadow-strong p-8 md:p-12 overflow-hidden border border-primary/10">
           <h1 className="text-3xl font-bold mb-2 font-poppins text-primary">Refund Policy – Job Ready</h1>
-          <p className="text-muted-foreground mb-8">Last Updated: May 12, 2026</p>
-          
+          <p className="text-muted-foreground mb-8">Last Updated: May 20, 2026</p>
+
           <div className="prose prose-slate max-w-none space-y-8">
             <p className="text-lg leading-relaxed">
               Thank you for using Job Ready. This Refund Policy explains how payments, credit purchases, and feature-based services are handled on the Job Ready platform.
@@ -37,11 +37,23 @@ const RefundPolicy: React.FC = () => {
                 <li>non-transferable</li>
                 <li>non-exchangeable for cash</li>
                 <li>usable only within the Job Ready platform</li>
+                <li>added only after successful live payment verification and credit activation</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">3. Technical Failures</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">3. Razorpay Test Mode and Blocked Credits</h2>
+              <p className="text-muted-foreground mb-4">During deployment verification or payment gateway testing, Job Ready may use Razorpay test mode. Test mode payments are not treated as live paid purchases.</p>
+              <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
+                <li>Credits are not added for Razorpay test mode payments.</li>
+                <li>A test mode payment message does not mean a live purchase was completed.</li>
+                <li>Once live payment mode is enabled, credits are added only after successful payment verification.</li>
+              </ul>
+              <p className="text-muted-foreground mt-4">If you believe a live payment was completed but credits were not added, contact support with the registered email address and Razorpay payment or order ID.</p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">4. Technical Failures</h2>
               <p className="text-muted-foreground mb-4">If a technical issue on Job Ready prevents successful completion of a purchased feature after credits have been deducted, the platform may:</p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
                 <li>restore the consumed credits, or</li>
@@ -51,7 +63,7 @@ const RefundPolicy: React.FC = () => {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">4. Non-Refundable Situations</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">5. Non-Refundable Situations</h2>
               <p className="text-muted-foreground mb-2">Refunds or credit restoration will generally not be provided in the following cases:</p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground text-sm">
                 <li>dissatisfaction with AI-generated results</li>
@@ -61,31 +73,33 @@ const RefundPolicy: React.FC = () => {
                 <li>accidental purchases</li>
                 <li>failure to use credits within validity (if applicable)</li>
                 <li>misunderstanding of platform features</li>
+                <li>interview termination due to warnings, malpractice, tab switching, or fullscreen violations</li>
+                <li>missed answers caused by user delay, device issues, or unstable internet connection</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">5. Duplicate or Failed Payments</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">6. Duplicate or Failed Payments</h2>
               <p className="text-muted-foreground">If a user is charged multiple times for the same transaction due to payment gateway errors or technical issues, Job Ready will investigate the transaction and may provide a monetary refund or equivalent credit restoration depending on the case.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">6. Chargebacks and Fraud</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">7. Chargebacks and Fraud</h2>
               <p className="text-muted-foreground">Any fraudulent transactions or chargeback attempts may result in account suspension, credit reversal, and restriction of platform access.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">7. Processing Time</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">8. Processing Time</h2>
               <p className="text-muted-foreground">Approved refunds or credit restorations may take a few business days to process depending on the payment provider or banking system.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">8. Abuse of Refund Policy</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">9. Abuse of Refund Policy</h2>
               <p className="text-muted-foreground">Job Ready reserves the right to deny refund or credit restoration requests in cases involving repeated abuse of the system, suspicious activity, attempts to exploit platform policies, or violation of Terms and Conditions.</p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">9. Contact</h2>
+              <h2 className="text-2xl font-bold mb-4 font-poppins text-foreground">10. Contact</h2>
               <p className="text-muted-foreground mb-4">For support related to payments or refund requests, contact:</p>
               <p className="font-semibold text-primary">Email: [YOUR SUPPORT EMAIL]</p>
               <p className="text-sm text-muted-foreground mt-2 italic">Please include: registered email address, payment reference or order ID, and a description of the issue.</p>
