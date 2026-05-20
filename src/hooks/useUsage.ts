@@ -60,7 +60,7 @@ export const useUsage = () => {
     });
   };
 
-  const triggerPaymentFlow = async (plan: string = 'pro') => {
+  const triggerPaymentFlow = async (plan: string = 'ats_one_time') => {
     setIsLoading(true);
     try {
       const res = await loadRazorpayCore();
@@ -81,7 +81,7 @@ export const useUsage = () => {
         amount: order.amount,
         currency: "INR",
         name: "Job Ready",
-        description: `Subscription for ${order.plan} plan`,
+        description: `Purchase ${order.plan}`,
         order_id: order.order_id,
         handler: async function (response: any) {
           try {
@@ -97,7 +97,7 @@ export const useUsage = () => {
 
             toast({
               title: "Success",
-              description: "Payment successful! Subscription activated.",
+              description: "Payment successful! Your credits have been added.",
             });
 
             fetchUsage(); // Refresh usage limits

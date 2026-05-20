@@ -5,8 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Loader2, Mic, Square, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { InterviewResponse } from '@/types/interview';
 import { toast } from '@/hooks/use-toast';
-
-const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
+import { apiWrapper } from '@/lib/apiWrapper';
 
 const InterviewSession: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
@@ -64,11 +63,7 @@ const InterviewSession: React.FC = () => {
             }
 
             try {
-                const token = localStorage.getItem('access_token');
-                // We need an endpoint to get current session status
-                const response = await fetch(`${INTERVIEW_API_URL}/session/${sessionId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await apiWrapper.get(`/interview/session/${sessionId}`);
                 
                 if (!response.ok) throw new Error("Session not found");
                 
@@ -129,11 +124,7 @@ const InterviewSession: React.FC = () => {
 
         const handleWarning = async (reason: string) => {
             try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/warning`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await apiWrapper.post(`/interview/${sessionId}/warning`);
                 
                 if (!response.ok) throw new Error("Failed to report warning");
                 
@@ -368,14 +359,7 @@ const InterviewSession: React.FC = () => {
         formData.append('retaken', hasRetaken ? 'true' : 'false');
 
         try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/response`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData,
-            });
+            const response = await apiWrapper.post(`/interview/${sessionId}/response`, formData);
 
 
             if (!response.ok) {

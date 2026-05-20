@@ -10,10 +10,9 @@ import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
 import Navbar from '@/components/Navbar';
 import { validateJobDescription } from '@/utils/validation';
+import { apiWrapper } from '@/lib/apiWrapper';
 
 
-
-const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview/audio`;
 
 const AudioInterviewSetup: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -28,10 +27,7 @@ const AudioInterviewSetup: React.FC = () => {
 
     const fetchActiveSessions = async () => {
         try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/active-sessions`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await apiWrapper.get('/interview/active-sessions');
             if (response.ok) {
                 const data = await response.json();
                 setActiveSessions(data.filter((s: any) => s.type === 'audio'));

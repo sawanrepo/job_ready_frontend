@@ -182,7 +182,7 @@ export const apiClient = {
   },
 
   async verifyPayment(paymentData: any): Promise<any> {
-    const response = await apiWrapper.post('/payment/payment/verify', paymentData);
+    const response = await apiWrapper.post('/payment/verify', paymentData);
 
     if (!response.ok) {
       const error = await response.json();

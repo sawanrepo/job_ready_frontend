@@ -6,8 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { InterviewResult } from '@/types/interview';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-
-const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
+import { apiWrapper } from '@/lib/apiWrapper';
 
 const InterviewResults: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
@@ -19,6 +18,9 @@ const InterviewResults: React.FC = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        let pollTimer: ReturnType<typeof setTimeout> | null = null;
+        let pollAttempts = 0;
+
         if (location.state?.resultData) {
             setResult(location.state.resultData);
             setLoading(false);
@@ -27,17 +29,21 @@ const InterviewResults: React.FC = () => {
 
         const fetchResult = async () => {
             try {
-                const token = localStorage.getItem('access_token');
                 // Try the unified interview results endpoint first
-                let response = await fetch(`${import.meta.env.VITE_API_URL}/interview/${sessionId}/result`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                let response = await apiWrapper.get(`/interview/${sessionId}/result`);
                 
                 // If not found, it might be under the audio-specific endpoint (or vice versa depending on router priority)
                 if (!response.ok) {
-                    response = await fetch(`${import.meta.env.VITE_API_URL}/interview/audio/${sessionId}/result`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
+                    response = await apiWrapper.get(`/interview/audio/${sessionId}/result`);
+                }
+
+                if (response.status === 202) {
+                    pollAttempts += 1;
+                    if (pollAttempts > 36) {
+                        throw new Error("Interview is still processing. Please try again shortly.");
+                    }
+                    pollTimer = setTimeout(fetchResult, 5000);
+                    return;
                 }
 
                 if (!response.ok) throw new Error('Failed to fetch results. The session might have expired or doesn\'t exist.');
@@ -52,6 +58,9 @@ const InterviewResults: React.FC = () => {
         };
 
         if (sessionId) fetchResult();
+        return () => {
+            if (pollTimer) clearTimeout(pollTimer);
+        };
     }, [sessionId, location.state]);
 
     if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin h-10 w-10" /></div>;

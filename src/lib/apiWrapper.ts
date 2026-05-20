@@ -15,17 +15,9 @@ class ApiWrapper {
   }> = [];
 
   private async refreshToken(): Promise<string> {
-    const refreshToken = localStorage.getItem('refresh_token');
-    
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`, {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -34,10 +26,6 @@ class ApiWrapper {
 
     const data = await response.json();
     localStorage.setItem('access_token', data.access_token);
-    
-    if (data.refresh_token) {
-      localStorage.setItem('refresh_token', data.refresh_token);
-    }
 
     return data.access_token;
   }
@@ -72,6 +60,7 @@ class ApiWrapper {
     return fetch(url, {
       ...config,
       headers,
+      credentials: 'include',
     });
   }
 
@@ -110,7 +99,6 @@ class ApiWrapper {
           
           // Clear tokens and redirect to login
           localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
           localStorage.removeItem('user_data');
           
           window.location.href = '/login';

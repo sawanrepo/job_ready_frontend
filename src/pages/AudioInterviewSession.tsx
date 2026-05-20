@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mic, Square, Loader2, CheckCircle2, Save, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { apiWrapper } from '@/lib/apiWrapper';
 
-const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview/audio`;
+const UNSUPPORTED_AUDIO_FORMAT_MESSAGE = "Your browser cannot record a supported audio format. Please switch to the latest Google Chrome or Microsoft Edge and try again.";
 
 interface AudioInterviewSessionProps { }
 
@@ -39,22 +40,39 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const currentChunksRef = useRef<BlobPart[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const resultPollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const resultPollAttemptsRef = useRef(0);
+
+    const getAudioFilename = (blob: Blob) => {
+        const mimeType = blob.type.split(';')[0];
+        if (mimeType === 'audio/mp4' || mimeType === 'audio/aac' || mimeType === 'audio/x-m4a') {
+            return 'answer.m4a';
+        }
+        if (mimeType === 'audio/mpeg' || mimeType === 'audio/mp3') {
+            return 'answer.mp3';
+        }
+        if (mimeType === 'audio/wav' || mimeType === 'audio/x-wav') {
+            return 'answer.wav';
+        }
+        if (mimeType === 'audio/ogg') {
+            return 'answer.ogg';
+        }
+        if (mimeType === 'audio/webm') {
+            return 'answer.webm';
+        }
+        throw new Error(UNSUPPORTED_AUDIO_FORMAT_MESSAGE);
+    };
 
     useEffect(() => {
         const fetchSession = async () => {
             // Handle new session creation
             if (location.state?.isNew && !sessionId) {
                 try {
-                    const token = localStorage.getItem('access_token');
                     const formData = new FormData();
                     formData.append('resume_pdf', location.state.resumeFile);
                     formData.append('job_description', location.state.jobDescription);
 
-                    const response = await fetch(`${INTERVIEW_API_URL}/start`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` },
-                        body: formData,
-                    });
+                    const response = await apiWrapper.post('/interview/audio/start', formData);
 
                     if (!response.ok) {
                         const errData = await response.json();
@@ -94,10 +112,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             if (!sessionId) return;
 
             try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch(`${INTERVIEW_API_URL}/session/${sessionId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await apiWrapper.get(`/interview/audio/session/${sessionId}`);
                 if (!response.ok) throw new Error("Session not found");
                 const data = await response.json();
                 if (!data.is_active) {
@@ -150,6 +165,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 URL.revokeObjectURL(currentAudioUrl);
             }
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            if (resultPollTimeoutRef.current) clearTimeout(resultPollTimeoutRef.current);
             if (document.fullscreenElement) {
                 document.exitFullscreen().catch(() => { });
             }
@@ -162,11 +178,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
 
         const handleWarning = async (reason: string) => {
             try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/warning`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await apiWrapper.post(`/interview/audio/${sessionId}/warning`);
                 const data = await response.json();
                 setWarnings(data.warnings_count);
                 
@@ -305,11 +317,22 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 return;
             }
 
-            let mimeType = 'audio/webm';
+            let mimeType = '';
             if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
                 mimeType = 'audio/webm;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                mimeType = 'audio/webm';
             } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
                 mimeType = 'audio/mp4';
+            }
+            if (!mimeType) {
+                toast({
+                    variant: "destructive",
+                    title: "Unsupported Browser",
+                    description: UNSUPPORTED_AUDIO_FORMAT_MESSAGE
+                });
+                setIsRecording(false);
+                return;
             }
 
             const mediaRecorder = new MediaRecorder(stream, { mimeType });
@@ -357,18 +380,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
         setIsUploading(true);
         try {
             const formData = new FormData();
-            formData.append('audio', currentBlob, 'answer.webm');
+            formData.append('audio', currentBlob, getAudioFilename(currentBlob));
             formData.append('question_index', currentQuestionIndex.toString());
             formData.append('retaken', hasRetaken ? 'true' : 'false');
 
-            const token = localStorage.getItem('access_token');
-            if (!token) throw new Error("Authentication session expired.");
-
-            const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/answer`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData,
-            });
+            const response = await apiWrapper.post(`/interview/audio/${sessionId}/answer`, formData);
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
@@ -390,7 +406,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             console.error("Answer submission error:", error);
             toast({
                 variant: "destructive",
-                title: "Upload Failed",
+                title: error.message === UNSUPPORTED_AUDIO_FORMAT_MESSAGE ? "Unsupported Browser" : "Upload Failed",
                 description: error.message || "Failed to save your answer. Please try again."
             });
         } finally {
@@ -405,17 +421,25 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             document.exitFullscreen().catch(() => { });
         }
         try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch(`${INTERVIEW_API_URL}/${sessionId}/result`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await apiWrapper.post(`/interview/audio/${sessionId}/result`);
+
+            if (response.status === 202) {
+                resultPollAttemptsRef.current += 1;
+                if (resultPollAttemptsRef.current > 36) {
+                    throw new Error("Interview is still processing. Please try again shortly.");
+                }
+                resultPollTimeoutRef.current = setTimeout(() => {
+                    submitInterview();
+                }, 5000);
+                return;
+            }
 
             if (!response.ok) {
                 const errData = await response.json();
                 throw new Error(errData.detail || "Failed to submit interview");
             }
 
+            resultPollAttemptsRef.current = 0;
             const resultData = await response.json();
             navigate(`/interview/results/${sessionId}`, { state: { resultData } });
 

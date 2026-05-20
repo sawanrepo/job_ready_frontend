@@ -11,10 +11,9 @@ import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
 import Navbar from '@/components/Navbar';
 import { validateJobDescription } from '@/utils/validation';
+import { apiWrapper } from '@/lib/apiWrapper';
 
 
-
-const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
 
 const InterviewSetup: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -29,10 +28,7 @@ const InterviewSetup: React.FC = () => {
 
     const fetchActiveSessions = async () => {
         try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/interview/active-sessions`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await apiWrapper.get('/interview/active-sessions');
             if (response.ok) {
                 const data = await response.json();
                 setActiveSessions(data.filter((s: any) => s.type === 'video'));
@@ -81,18 +77,11 @@ const InterviewSetup: React.FC = () => {
 
         setIsLoading(true);
         try {
-            const token = localStorage.getItem('access_token');
             const formData = new FormData();
             formData.append('resume_pdf', selectedFile);
             formData.append('job_description', jobDescription);
 
-            const response = await fetch(`${INTERVIEW_API_URL}/start`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData,
-            });
+            const response = await apiWrapper.post('/interview/start', formData);
 
             if (!response.ok) {
                 const errorData = await response.json();

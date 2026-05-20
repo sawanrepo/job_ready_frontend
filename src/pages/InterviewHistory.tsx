@@ -6,9 +6,7 @@ import { Loader2, CheckCircle, AlertCircle, Video, Mic, Calendar } from 'lucide-
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
-
-
-const INTERVIEW_API_URL = `${import.meta.env.VITE_API_URL}/interview`;
+import { apiWrapper } from '@/lib/apiWrapper';
 
 interface InterviewResultData {
     final_verdict: string;
@@ -25,7 +23,30 @@ interface InterviewResultData {
 interface HistoryResponse {
     video: InterviewResultData | null;
     audio: InterviewResultData | null;
+    video_meta?: {
+        created_at: string | null;
+        display_label?: string;
+    };
+    audio_meta?: {
+        created_at: string | null;
+        display_label?: string;
+    };
 }
+
+const formatDateTime = (value?: string | null) => {
+    if (!value) return 'Date unavailable';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Date unavailable';
+
+    return date.toLocaleString(undefined, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
 
 const InterviewHistory: React.FC = () => {
     const [history, setHistory] = useState<HistoryResponse | null>(null);
@@ -36,10 +57,7 @@ const InterviewHistory: React.FC = () => {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch(`${INTERVIEW_API_URL}/history/latest`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await apiWrapper.get('/interview/history/latest');
                 if (!response.ok) {
                     throw new Error('Failed to fetch interview history');
                 }
@@ -109,7 +127,7 @@ const InterviewHistory: React.FC = () => {
                                 <Mic className="text-orange-500" /> Latest Audio Interview
                             </h2>
                             {history.audio ? (
-                                <ResultCard result={history.audio} type="Audio" color="orange" />
+                                <ResultCard result={history.audio} type="Audio" color="orange" createdAt={history.audio_meta?.created_at} />
                             ) : (
                                 <Card className="p-8 text-center border-dashed flex flex-col items-center h-full justify-center text-muted-foreground">
                                     <Mic className="h-8 w-8 mb-4 opacity-50" />
@@ -125,7 +143,7 @@ const InterviewHistory: React.FC = () => {
                                 <Video className="text-red-500" /> Latest Video Interview
                             </h2>
                             {history.video ? (
-                                <ResultCard result={history.video} type="Video" color="red" />
+                                <ResultCard result={history.video} type="Video" color="red" createdAt={history.video_meta?.created_at} />
                             ) : (
                                 <Card className="p-8 text-center border-dashed flex flex-col items-center h-full justify-center text-muted-foreground">
                                     <Video className="h-8 w-8 mb-4 opacity-50" />
@@ -141,7 +159,7 @@ const InterviewHistory: React.FC = () => {
     );
 };
 
-const ResultCard = ({ result, type, color }: { result: InterviewResultData, type: string, color: string }) => {
+const ResultCard = ({ result, type, color, createdAt }: { result: InterviewResultData, type: string, color: string, createdAt?: string | null }) => {
     const isReady = result.final_verdict === "Ready";
     return (
         <Card className="h-full hover:shadow-md transition-shadow">
@@ -150,6 +168,10 @@ const ResultCard = ({ result, type, color }: { result: InterviewResultData, type
                     <div>
                         <CardTitle className="text-xl">Verdict</CardTitle>
                         <CardDescription className="mt-1">Based on your {type.toLowerCase()} responses</CardDescription>
+                        <div className="mt-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            <span>Latest interview: {formatDateTime(createdAt)}</span>
+                        </div>
                     </div>
                     <Badge variant={isReady ? "default" : "destructive"} className="text-sm px-3 py-1">
                         {result.final_verdict}

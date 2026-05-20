@@ -6,11 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ATSResultDisplay } from '@/components/ATSResultDisplay';
 import { apiClient } from '@/lib/api';
+import { apiWrapper } from '@/lib/apiWrapper';
 import { toast } from '@/hooks/use-toast';
 
 import Navbar from '@/components/Navbar';
-
-const RESUME_API_URL = `${import.meta.env.VITE_API_URL}/resume`;
 
 
 interface ATSResultData {
@@ -47,10 +46,7 @@ const ResumeHistory: React.FC = () => {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch(`${RESUME_API_URL}/history/latest`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await apiWrapper.get('/resume/history/latest');
                 if (!response.ok) {
                     throw new Error('Failed to fetch resume history');
                 }
