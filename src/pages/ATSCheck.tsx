@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { FileUpload } from '@/components/FileUpload';
 import { ATSResultDisplay } from '@/components/ATSResultDisplay';
 import { useNavigate } from 'react-router-dom';
@@ -19,15 +29,14 @@ const ATSCheck = () => {
   const [jobDescription, setJobDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ATSCheckResponse | null>(null);
+  const [showLimitedInputDialog, setShowLimitedInputDialog] = useState(false);
   const navigate = useNavigate();
   const { usage, isLoading: usageLoading, formatResetTime, triggerPaymentFlow, fetchUsage } = useUsage();
   
-  const validation = validateJobDescription(jobDescription);
+  const validation = validateJobDescription(jobDescription, { allowShortTarget: true });
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const runAnalysis = async () => {
     if (!selectedFile) {
       toast({
         variant: "destructive",
@@ -45,7 +54,6 @@ const ATSCheck = () => {
       });
       return;
     }
-
 
     if (usage && usage.ats_checks_left_today === 0) {
       toast({
@@ -89,6 +97,17 @@ const ATSCheck = () => {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (selectedFile && validation.isValid && validation.isLimitedInput) {
+      setShowLimitedInputDialog(true);
+      return;
+    }
+
+    await runAnalysis();
+  };
+
   const canRunAnalysis = usage && usage.ats_checks_left_today > 0;
   const hasUsageData = usage && !usageLoading;
 
@@ -104,7 +123,7 @@ const ATSCheck = () => {
             Analyze Your Resume
           </h2>
           <p className="text-xl text-muted-foreground">
-            Upload your resume and job description to get detailed ATS compatibility feedback
+            Upload your resume and job description or job role to get detailed ATS compatibility feedback
           </p>
 
           {/* Usage Information */}
@@ -146,19 +165,19 @@ const ATSCheck = () => {
           {/* Job Description */}
           <Card className="gradient-card border-0">
             <CardHeader>
-              <CardTitle className="font-poppins">Job Description</CardTitle>
+              <CardTitle className="font-poppins">Job Description or Job Role</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="relative">
                 <Textarea
-                  placeholder="Paste the job description here..."
+                  placeholder="Paste the job description here. For best results, use the full job description from LinkedIn, Internshala, Naukri, or the platform where you are applying. You can also just enter the job role (e.g. 'Software Engineer') for a general ATS compatibility check, but a full JD will give you more specific feedback."
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                   className={`min-h-[200px] resize-none ${!validation.isValid && jobDescription.length > 0 ? 'border-destructive' : ''}`}
                 />
                 <div className="absolute bottom-3 right-3 text-xs font-medium bg-white/80 px-2 py-1 rounded border">
                   <span className={!validation.isValid && jobDescription.length > 0 ? 'text-destructive' : 'text-muted-foreground'}>
-                    Words: {validation.wordCount} {validation.isValid ? '' : '/ min 30'}
+                    Words: {validation.wordCount}
                   </span>
                 </div>
               </div>
@@ -220,6 +239,23 @@ const ATSCheck = () => {
         {/* Results */}
         <ATSResultDisplay result={result} isLoading={isLoading} />
       </main>
+
+      <AlertDialog open={showLimitedInputDialog} onOpenChange={setShowLimitedInputDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Use a full JD for better accuracy</AlertDialogTitle>
+            <AlertDialogDescription>
+              For better ATS accuracy, paste the full job description from LinkedIn, Internshala, Naukri, or the platform where you are applying. A role-only check gives a general score, not a job-specific score.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>I'll Paste JD</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void runAnalysis()}>
+              Continue Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

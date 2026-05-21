@@ -121,6 +121,7 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
   const redFlags = result.red_flags ?? [];
   const suggestions = result.improvement_suggestions ?? result.suggestions ?? [];
   const actionVerbsCount = result.action_verbs_count ?? 0;
+  const resultNote = result.result_note;
 
   return (
     <div className="relative">
@@ -129,6 +130,13 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
           <CardTitle className="font-poppins text-3xl text-gradient">Analysis Results</CardTitle>
         </CardHeader>
         <CardContent className="space-y-8">
+          {resultNote && (
+            <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-foreground">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+              <p className="font-medium leading-relaxed">{resultNote}</p>
+            </div>
+          )}
+
           {/* Main Score and Keyword Match */}
           <div className="grid md:grid-cols-3 gap-6 items-center">
             <div className="md:col-span-1 flex justify-center animate-scale-in" style={{ animationDelay: '0.2s' }}>

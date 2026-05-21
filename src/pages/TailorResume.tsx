@@ -2,9 +2,19 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { FileUpload } from '@/components/FileUpload';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, CreditCard, ExternalLink, Eye, Loader2, Sparkles, Check, Search, Wand2, ArrowRight, Plus, Trash2, User as UserIcon, Briefcase, Projector } from 'lucide-react';
+import { ArrowLeft, Download, FileText, CreditCard, ExternalLink, Eye, Loader2, Sparkles, Check, Search, Wand2, ArrowRight, Plus, Trash2, User as UserIcon, Briefcase, Projector, AlertTriangle } from 'lucide-react';
 import { apiClient, TailorResumeResponse, TailoredContent, ExperienceItem, ProjectItem } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
@@ -23,11 +33,12 @@ const TailorResume = () => {
   const [proposedContent, setProposedContent] = useState<TailoredContent | null>(null);
   const [editedContent, setEditedContent] = useState<TailoredContent | null>(null);
   const [skillsSearch, setSkillsSearch] = useState('');
+  const [showLimitedInputDialog, setShowLimitedInputDialog] = useState(false);
 
   const navigate = useNavigate();
   const { usage, isLoading: usageLoading, formatResetTime, triggerPaymentFlow, fetchUsage } = useUsage();
   
-  const validation = validateJobDescription(jobDescription);
+  const validation = validateJobDescription(jobDescription, { allowShortTarget: true });
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -53,9 +64,7 @@ const TailorResume = () => {
     };
   }, [step]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const runTailoring = async () => {
     if (!selectedFile) {
       toast({
         variant: "destructive",
@@ -118,6 +127,17 @@ const TailorResume = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (selectedFile && validation.isValid && validation.isLimitedInput) {
+      setShowLimitedInputDialog(true);
+      return;
+    }
+
+    await runTailoring();
   };
 
   const handleGenerate = async () => {
@@ -463,19 +483,19 @@ const TailorResume = () => {
               {/* Job Description */}
               <Card className="gradient-card border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="font-poppins">Target Job Description</CardTitle>
+                  <CardTitle className="font-poppins">Target Job Description or Role</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
                     <Textarea
-                      placeholder="Paste the job description you want to tailor your resume for..."
+                      placeholder="Paste the job description. For best results, use the full job description from LinkedIn, Internshala, Naukri, or the platform where you are applying. You can also just enter the job role (e.g. 'Software Engineer') for a general ATS compatibility check, but a full JD will give you more specific feedback."
                       value={jobDescription}
                       onChange={(e) => setJobDescription(e.target.value)}
                       className={`min-h-[200px] resize-none ${!validation.isValid && jobDescription.length > 0 ? 'border-destructive' : ''}`}
                     />
                     <div className="absolute bottom-3 right-3 text-xs font-medium bg-white/80 px-2 py-1 rounded border">
                       <span className={!validation.isValid && jobDescription.length > 0 ? 'text-destructive' : 'text-muted-foreground'}>
-                        Words: {validation.wordCount} {validation.isValid ? '' : '/ min 30'}
+                        Words: {validation.wordCount}
                       </span>
                     </div>
                   </div>
@@ -547,6 +567,13 @@ const TailorResume = () => {
                 </p>
               </div>
             </div>
+
+            {proposedContent.result_note && (
+              <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-foreground">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                <p className="font-medium leading-relaxed">{proposedContent.result_note}</p>
+              </div>
+            )}
 
             <Tabs defaultValue="skills" className="w-full">
               <TabsList className="bg-white border border-primary/10 p-1 w-full grid grid-cols-4 md:w-auto md:inline-flex mb-6">
@@ -917,6 +944,13 @@ const TailorResume = () => {
         {/* Step 3: PDF Preview & Download */}
         {step === 3 && result && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {result.result_note && (
+              <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-foreground">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                <p className="font-medium leading-relaxed">{result.result_note}</p>
+              </div>
+            )}
+
             <Tabs defaultValue="preview" className="w-full">
               <div className="flex items-center justify-between mb-4">
                 <TabsList className="bg-white/50 border border-primary/10">
@@ -1047,6 +1081,23 @@ const TailorResume = () => {
         )}
 
       </main>
+
+      <AlertDialog open={showLimitedInputDialog} onOpenChange={setShowLimitedInputDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Use a full JD for better accuracy</AlertDialogTitle>
+            <AlertDialogDescription>
+              For better resume tailoring accuracy, paste the full job description from LinkedIn, Internshala, Naukri, or the platform where you are applying. Role-only tailoring gives a more general resume update.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>I'll Paste JD</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void runTailoring()}>
+              Continue Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertCircle, FileSearch, Download, Calendar, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, AlertCircle, FileSearch, Download, Calendar, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ATSResultDisplay } from '@/components/ATSResultDisplay';
@@ -19,6 +19,7 @@ interface ATSResultData {
     missing_skills: string[];
     job_title_match: string;
     improvement_suggestions: string[];
+    result_note?: string | null;
 }
 
 interface TailorResultData {
@@ -164,6 +165,13 @@ const ResumeHistory: React.FC = () => {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="pt-6">
+                                        {history.ats.result.result_note && (
+                                            <div className="mb-6 flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900">
+                                                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                                <p className="font-medium leading-relaxed">{history.ats.result.result_note}</p>
+                                            </div>
+                                        )}
+
                                         <div className="flex justify-around mb-8">
                                             <div className="text-center">
                                                 <div className="text-3xl font-bold text-blue-600">{history.ats.result.ats_score}%</div>

@@ -14,6 +14,8 @@ export interface ATSCheckResponse {
   improvement_suggestions: string[];
   feedback?: string;
   suggestions?: string[];
+  job_input_type?: string | null;
+  result_note?: string | null;
   // Legacy fields for backward compatibility
   score?: number;
 }
@@ -69,12 +71,16 @@ export interface TailoredContent {
   certifications?: CertificationItem[];
   is_resume?: boolean;
   error_message?: string | null;
+  job_input_type?: string | null;
+  result_note?: string | null;
 }
 
 export interface TailorResumeResponse {
   tailored_content: TailoredContent;
   filename: string;
   pdf_url: string;
+  job_input_type?: string | null;
+  result_note?: string | null;
 }
 
 
