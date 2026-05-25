@@ -5,10 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mic, Square, Loader2, CheckCircle2, Save, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { apiWrapper } from '@/lib/apiWrapper';
+import { AdsterraResponsiveBanner } from '@/components/AdsterraAd';
 
 const UNSUPPORTED_AUDIO_FORMAT_MESSAGE = "Your browser cannot record a supported audio format. Please switch to the latest Google Chrome or Microsoft Edge and try again.";
+const STATUS_POLL_DELAY_MS = 4000;
+const RESULT_RETRY_DELAY_MS = 12000;
 
 interface AudioInterviewSessionProps { }
+type ProcessingStage = 'transcribing' | 'generating_report';
+
+interface ProcessingProgress {
+    current: number;
+    total: number;
+}
 
 const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const { sessionId: paramSessionId } = useParams<{ sessionId: string }>();
@@ -24,6 +33,8 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(initialIndex);
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [processingStage, setProcessingStage] = useState<ProcessingStage>('transcribing');
+    const [processingProgress, setProcessingProgress] = useState<ProcessingProgress>({ current: 0, total: initialData?.total_questions || 10 });
     const [isUploading, setIsUploading] = useState(false);
     const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
     const [currentBlob, setCurrentBlob] = useState<Blob | null>(null);
@@ -42,7 +53,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const resultPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resultPollAttemptsRef = useRef(0);
+    const resultProgressSeenRef = useRef(false);
+    const processingProgressRef = useRef<ProcessingProgress>({ current: 0, total: initialData?.total_questions || 10 });
     const autoSubmitAfterStopRef = useRef(false);
+    const hasRequestedResultRef = useRef(false);
+    const suppressWarningsRef = useRef(false);
 
     const getAudioFilename = (blob: Blob) => {
         const mimeType = blob.type.split(';')[0];
@@ -62,6 +77,87 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             return 'answer.webm';
         }
         throw new Error(UNSUPPORTED_AUDIO_FORMAT_MESSAGE);
+    };
+
+    const getSafeAudioErrorMessage = (error: any) => {
+        const rawMessage = typeof error?.message === 'string' ? error.message : '';
+        const message = rawMessage.toLowerCase();
+
+        if (message.includes('rate limit') || message.includes('too many requests') || message.includes('rpm') || message.includes('429')) {
+            return 'The analysis service is busy. Please wait a moment while we retry.';
+        }
+
+        if (message.includes('invalid audio answer') || message.includes('invalid question') || message.includes('question index')) {
+            return 'Your interview is complete. Preparing the final report now.';
+        }
+
+        return rawMessage || 'Something went wrong. Please try again.';
+    };
+
+    const scheduleSubmitRetry = (delayMs: number) => {
+        resultPollTimeoutRef.current = setTimeout(() => {
+            submitInterview();
+        }, delayMs);
+    };
+
+    const updateProcessingProgress = (progress: ProcessingProgress) => {
+        processingProgressRef.current = progress;
+        setProcessingProgress(progress);
+    };
+
+    const pollSessionUntilTranscribed = async () => {
+        const response = await apiWrapper.get(`/interview/audio/session/${sessionId}`);
+
+        if (response.status === 404) {
+            setProcessingStage('generating_report');
+            return true;
+        }
+
+        if (response.status === 429) {
+            scheduleSubmitRetry(RESULT_RETRY_DELAY_MS);
+            return false;
+        }
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || "Could not check interview progress.");
+        }
+
+        const data = await response.json();
+        const total = data.total_questions || totalQuestions;
+        const transcribed = data.transcription_progress?.transcribed_count ?? 0;
+
+        setWarnings(data.warnings_count || 0);
+        setQuestions(data.questions || []);
+        setTotalQuestions(total);
+        setCurrentQuestionIndex(data.current_question_index ?? total);
+        updateProcessingProgress({ current: Math.min(transcribed, total), total });
+
+        if (!data.is_active && (data.warnings_count || 0) >= 5) {
+            setIsMalpractice(true);
+            throw new Error("Interview discarded due to malpractice. No result generated.");
+        }
+
+        const transcriptsComplete =
+            total > 0 &&
+            data.current_question_index >= total &&
+            transcribed >= total &&
+            data.processing_status === 'completed';
+
+        if (!transcriptsComplete) {
+            setProcessingStage('transcribing');
+            resultPollAttemptsRef.current += 1;
+
+            if (resultPollAttemptsRef.current > 60) {
+                throw new Error("Interview is still transcribing. Please try again shortly.");
+            }
+
+            scheduleSubmitRetry(STATUS_POLL_DELAY_MS);
+            return false;
+        }
+
+        setProcessingStage('generating_report');
+        return true;
     };
 
     useEffect(() => {
@@ -108,6 +204,20 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 if (initialData.warnings_count !== undefined) {
                     setWarnings(initialData.warnings_count);
                 }
+                const initialTotal = initialData.total_questions || questions.length || totalQuestions;
+                if (
+                    initialIndex >= initialTotal &&
+                    initialData.processing_status === 'completed' &&
+                    initialData.result_status !== 'generating'
+                ) {
+                    setHasStartedSession(true);
+                    if (!hasRequestedResultRef.current) {
+                        hasRequestedResultRef.current = true;
+                        setTimeout(() => {
+                            submitInterview();
+                        }, 0);
+                    }
+                }
                 return;
             }
             if (!sessionId) return;
@@ -123,6 +233,20 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                 setQuestions(data.questions);
                 setTotalQuestions(data.total_questions);
                 setCurrentQuestionIndex(data.current_question_index);
+
+                if (
+                    data.current_question_index >= data.total_questions &&
+                    data.processing_status === 'completed' &&
+                    data.result_status !== 'generating'
+                ) {
+                    setHasStartedSession(true);
+                    if (!hasRequestedResultRef.current) {
+                        hasRequestedResultRef.current = true;
+                        setTimeout(() => {
+                            submitInterview();
+                        }, 0);
+                    }
+                }
             } catch (err) {
                 console.error("Failed to fetch audio session:", err);
                 toast({
@@ -203,7 +327,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
         };
 
         const onVisibilityChange = () => {
-            if (document.hidden) {
+            if (document.hidden && !suppressWarningsRef.current) {
                 handleWarning("Tab change");
             }
         };
@@ -211,7 +335,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
         const onFullscreenChange = () => {
             const isFull = document.fullscreenElement !== null;
             setIsFullscreen(isFull);
-            if (!isFull && !isMalpractice && hasStartedSession) {
+            if (!isFull && !isMalpractice && hasStartedSession && !suppressWarningsRef.current) {
                 handleWarning("Exit full screen");
                 if (isRecording) stopRecording();
             }
@@ -398,6 +522,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     };
 
     const handleNextQuestionWithBlob = async (blob: Blob | null) => {
+        if (currentQuestionIndex >= totalQuestions) {
+            await submitInterview();
+            return;
+        }
+
         if (!blob || !sessionId) {
             toast({
                 variant: "destructive",
@@ -445,6 +574,11 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     const skipCurrentQuestion = async (reason: string) => {
         if (!sessionId || isUploading) return;
 
+        if (currentQuestionIndex >= totalQuestions) {
+            await submitInterview();
+            return;
+        }
+
         setIsUploading(true);
         try {
             const formData = new FormData();
@@ -476,22 +610,58 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
     };
 
     const submitInterview = async () => {
+        if (!sessionId) return;
+
+        hasRequestedResultRef.current = true;
+        suppressWarningsRef.current = true;
         setIsProcessing(true);
+
+        if (
+            resultProgressSeenRef.current &&
+            processingProgressRef.current.current >= processingProgressRef.current.total
+        ) {
+            setProcessingStage('generating_report');
+        } else {
+            setProcessingStage('transcribing');
+            updateProcessingProgress({ current: Math.min(currentQuestionIndex, totalQuestions), total: totalQuestions });
+        }
         // Automatically exit fullscreen when analysis starts
         if (document.fullscreenElement) {
             document.exitFullscreen().catch(() => { });
         }
         try {
+            const readyForResult = await pollSessionUntilTranscribed();
+            if (!readyForResult) return;
+
+            resultProgressSeenRef.current = true;
             const response = await apiWrapper.post(`/interview/audio/${sessionId}/result`);
 
             if (response.status === 202) {
+                const pendingData = await response.json().catch(() => ({}));
+                const detail = pendingData.detail;
+                if (detail?.stage === 'generating_report') {
+                    setProcessingStage('generating_report');
+                } else {
+                    const total = detail?.total_questions || totalQuestions;
+                    const current = detail?.current_answer_index || Math.min(total, (detail?.transcribed_count || 0) + 1);
+                    setProcessingStage('transcribing');
+                    updateProcessingProgress({ current, total });
+                }
                 resultPollAttemptsRef.current += 1;
                 if (resultPollAttemptsRef.current > 36) {
                     throw new Error("Interview is still processing. Please try again shortly.");
                 }
-                resultPollTimeoutRef.current = setTimeout(() => {
-                    submitInterview();
-                }, 5000);
+                scheduleSubmitRetry(RESULT_RETRY_DELAY_MS);
+                return;
+            }
+
+            if (response.status === 429) {
+                setProcessingStage('generating_report');
+                resultPollAttemptsRef.current += 1;
+                if (resultPollAttemptsRef.current > 36) {
+                    throw new Error("The analysis service is busy. Please try again shortly.");
+                }
+                scheduleSubmitRetry(RESULT_RETRY_DELAY_MS);
                 return;
             }
 
@@ -501,6 +671,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             }
 
             resultPollAttemptsRef.current = 0;
+            resultProgressSeenRef.current = false;
             const resultData = await response.json();
             navigate(`/interview/results/${sessionId}`, { state: { resultData } });
 
@@ -509,7 +680,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error.message || "Failed to analyze interview.",
+                description: getSafeAudioErrorMessage(error),
             });
             setIsProcessing(false);
         }
@@ -729,8 +900,15 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                             <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" />
                         </div>
                         <h2 className="text-2xl font-bold font-poppins text-center">Analyzing Your Answers...</h2>
+                        <div className="rounded-full border border-primary/20 bg-white/80 px-4 py-2 text-sm font-semibold text-primary shadow-sm">
+                            {processingStage === 'generating_report'
+                                ? 'Generating final report'
+                                : `Analyzing answer ${processingProgress.current}/${processingProgress.total}`}
+                        </div>
                         <p className="text-muted-foreground text-center max-w-md">
-                            Our AI is reviewing your transcripts and generating your performance report. This may take a minute.
+                            {processingStage === 'generating_report'
+                                ? 'Your answers are transcribed. Gemini is preparing your final performance report.'
+                                : 'AI is listening to your response. This can take a minute after the last recording.'}
                         </p>
                     </div>
                 ) : (
@@ -824,6 +1002,7 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                     </Card>
                 )}
             </main>
+            <AdsterraResponsiveBanner className="mb-4 max-w-4xl" />
         </div>
     );
 };

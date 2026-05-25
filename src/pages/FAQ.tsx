@@ -6,6 +6,9 @@ import Footer from '@/components/Footer';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, HelpCircle, Shield, Zap, FileText, Users, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { LearnCta } from '@/components/LearnCta';
+import { LEARN_LINKS } from '@/lib/learnLinks';
+import { AdsterraNativeAd, AdsterraResponsiveBanner } from '@/components/AdsterraAd';
 
 const FAQ = () => {
   const navigate = useNavigate();
@@ -133,6 +136,8 @@ const FAQ = () => {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-12">
+        <AdsterraResponsiveBanner className="mt-0 px-0" />
+
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
             <div className="p-4 rounded-full bg-primary/10">
@@ -185,6 +190,15 @@ const FAQ = () => {
           </CardContent>
         </Card>
 
+        <AdsterraNativeAd className="px-0" visibleClassName="w-full max-w-3xl" />
+
+        <LearnCta
+          className="mt-8"
+          description="Explore resume, ATS, and interview tips in our career guides."
+          actionText="Read Articles"
+          href={LEARN_LINKS.articles}
+        />
+
         {/* CTA Section */}
         <div className="mt-12 text-center">
           <Card className="gradient-card border-0">
@@ -229,6 +243,8 @@ const FAQ = () => {
             </CardContent>
           </Card>
         </div>
+
+        <AdsterraResponsiveBanner className="mb-0 px-0" />
       </main>
       <Footer />
     </div>

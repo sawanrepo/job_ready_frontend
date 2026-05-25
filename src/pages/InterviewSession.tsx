@@ -1,41 +1,98 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mic, Square, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle, Loader2, Mic, Radio, Send, Square } from 'lucide-react';
 import { InterviewResponse } from '@/types/interview';
 import { toast } from '@/hooks/use-toast';
 import { apiWrapper } from '@/lib/apiWrapper';
+import { AdsterraResponsiveBanner } from '@/components/AdsterraAd';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+const QUESTION_SECONDS = 120;
+const LIVE_ANSWER_SECONDS = 110;
+
+const buildLiveSocketUrl = (sessionId: string, token: string) => {
+    const wsBase = API_BASE_URL.replace(/\/$/, '').replace(/^http/, 'ws');
+    return `${wsBase}/interview/${sessionId}/live?token=${encodeURIComponent(token)}`;
+};
+
+const refreshAccessTokenForLiveSocket = async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+    });
+
+    if (!response.ok) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_data');
+        throw new Error("Your login session expired. Please login again.");
+    }
+
+    const data = await response.json();
+    localStorage.setItem('access_token', data.access_token);
+    return data.access_token as string;
+};
+
+const pcm16FromFloat32 = (input: Float32Array, inputSampleRate: number, outputSampleRate = 16000) => {
+    const ratio = inputSampleRate / outputSampleRate;
+    const outputLength = Math.max(1, Math.round(input.length / ratio));
+    const result = new Int16Array(outputLength);
+
+    let inputOffset = 0;
+    for (let outputOffset = 0; outputOffset < outputLength; outputOffset++) {
+        const nextInputOffset = Math.min(input.length, Math.round((outputOffset + 1) * ratio));
+        let sum = 0;
+        let count = 0;
+
+        for (let i = inputOffset; i < nextInputOffset; i++) {
+            sum += input[i];
+            count++;
+        }
+
+        const sample = Math.max(-1, Math.min(1, count ? sum / count : 0));
+        result[outputOffset] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+        inputOffset = nextInputOffset;
+    }
+
+    return result.buffer;
+};
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+};
 
 const InterviewSession: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
     const location = useLocation();
     const navigate = useNavigate();
 
-    // State
     const [questionData, setQuestionData] = useState<InterviewResponse | null>(location.state?.initialData || null);
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
-
+    const [liveStatus, setLiveStatus] = useState('');
     const [warnings, setWarnings] = useState(location.state?.initialData?.warnings_count || 0);
     const [isMalpractice, setIsMalpractice] = useState(false);
     const [hasStartedSession, setHasStartedSession] = useState(false);
     const [hasAgreedToRules, setHasAgreedToRules] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(document.fullscreenElement !== null);
-
-    const [recordingTimeLeft, setRecordingTimeLeft] = useState(180); // 3 minutes total
-    const [currentRecordingTime, setCurrentRecordingTime] = useState(0); // Time spent in current recording
-    const [hasRetaken, setHasRetaken] = useState(false);
+    const [recordingTimeLeft, setRecordingTimeLeft] = useState(QUESTION_SECONDS);
+    const [currentRecordingTime, setCurrentRecordingTime] = useState(0);
     const [isQuestionExpired, setIsQuestionExpired] = useState(false);
 
-    // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
-    const chunksRef = useRef<Blob[]>([]);
     const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const autoSubmitAfterStopRef = useRef(false);
+    const wsRef = useRef<WebSocket | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
+    const audioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+    const videoFrameIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const attachStreamToVideo = async (stream: MediaStream) => {
         const video = videoRef.current;
@@ -52,7 +109,41 @@ const InterviewSession: React.FC = () => {
         }
     };
 
-    // Initialize Camera & Fetch Session if missing
+    const cleanupLiveTransport = () => {
+        if (videoFrameIntervalRef.current) {
+            clearInterval(videoFrameIntervalRef.current);
+            videoFrameIntervalRef.current = null;
+        }
+
+        if (audioProcessorRef.current) {
+            audioProcessorRef.current.disconnect();
+            audioProcessorRef.current.onaudioprocess = null;
+            audioProcessorRef.current = null;
+        }
+
+        if (audioSourceRef.current) {
+            audioSourceRef.current.disconnect();
+            audioSourceRef.current = null;
+        }
+
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            audioContextRef.current.close().catch(() => { });
+        }
+        audioContextRef.current = null;
+    };
+
+    const closeLiveSocket = () => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.close(1000);
+        }
+        wsRef.current = null;
+    };
+
+    const cleanupLiveSession = () => {
+        cleanupLiveTransport();
+        closeLiveSocket();
+    };
+
     useEffect(() => {
         const startCamera = async () => {
             try {
@@ -102,7 +193,6 @@ const InterviewSession: React.FC = () => {
         startCamera();
         fetchSession();
 
-        // Security: Full Screen initial check
         const enterFullScreen = async () => {
             try {
                 if (!document.fullscreenElement) {
@@ -115,6 +205,7 @@ const InterviewSession: React.FC = () => {
         enterFullScreen();
 
         return () => {
+            cleanupLiveSession();
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
             }
@@ -125,12 +216,12 @@ const InterviewSession: React.FC = () => {
     }, [sessionId, navigate]);
 
     useEffect(() => {
-        if (!hasStartedSession || videoUrl) return;
+        if (!hasStartedSession) return;
         const stream = streamRef.current;
         if (stream && stream.getTracks().every(t => t.readyState === 'live')) {
             attachStreamToVideo(stream);
         }
-    }, [hasStartedSession, videoUrl, questionData]);
+    }, [hasStartedSession, questionData]);
 
     const reenterFullscreen = async () => {
         try {
@@ -145,7 +236,79 @@ const InterviewSession: React.FC = () => {
         }
     };
 
-    // Anti-Cheating Listeners
+    const applyInterviewResponse = (result: InterviewResponse) => {
+        cleanupLiveTransport();
+        wsRef.current = null;
+        setIsRecording(false);
+        setIsProcessing(false);
+        setLiveStatus('');
+
+        if (result.interview_ended) {
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => { });
+            }
+            navigate(`/interview/results/${sessionId}`);
+        } else {
+            setQuestionData(result);
+            setRecordingTimeLeft(QUESTION_SECONDS);
+            setCurrentRecordingTime(0);
+            setIsQuestionExpired(false);
+        }
+    };
+
+    const skipQuestion = async (reason: string) => {
+        if (!sessionId || isProcessing) return;
+
+        cleanupLiveSession();
+        setIsRecording(false);
+        setIsProcessing(true);
+        const formData = new FormData();
+        formData.append('reason', reason);
+
+        try {
+            const response = await apiWrapper.post(`/interview/${sessionId}/skip`, formData);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || "Could not move to the next question.");
+            }
+            const result: InterviewResponse = await response.json();
+            applyInterviewResponse(result);
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: "Question Skip Failed",
+                description: error instanceof Error ? error.message : "Could not move to the next question. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const stopRecording = () => {
+        if (!isRecording) return;
+
+        cleanupLiveTransport();
+        setIsRecording(false);
+        setIsProcessing(true);
+        setLiveStatus("Generating next question from your live answer...");
+
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
+        const ws = wsRef.current;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'finish_answer' }));
+        } else {
+            setIsProcessing(false);
+            setLiveStatus('');
+            toast({
+                variant: "destructive",
+                title: "Live Connection Lost",
+                description: "Could not send your answer. Please try this question again."
+            });
+        }
+    };
+
     useEffect(() => {
         if (!hasStartedSession || isMalpractice || isProcessing) return;
 
@@ -160,6 +323,7 @@ const InterviewSession: React.FC = () => {
 
                 if (data.warnings_count >= 5 || data.is_active === false) {
                     setIsMalpractice(true);
+                    cleanupLiveSession();
                     toast({
                         variant: "destructive",
                         title: "Interview Terminated",
@@ -211,7 +375,6 @@ const InterviewSession: React.FC = () => {
         };
     }, [sessionId, isMalpractice, hasStartedSession, isRecording, isProcessing]);
 
-    // Handle timer - starts per question
     useEffect(() => {
         if (isMalpractice || isProcessing || !hasStartedSession || !isFullscreen) {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -223,20 +386,15 @@ const InterviewSession: React.FC = () => {
                 if (prev <= 1) {
                     clearInterval(timerIntervalRef.current!);
                     if (isRecording) {
-                        autoSubmitAfterStopRef.current = true;
                         stopRecording();
                     } else {
-                        if (chunksRef.current.length > 0) {
-                            submitResponse();
-                        } else {
-                            setIsQuestionExpired(true);
-                            toast({
-                                variant: "destructive",
-                                title: "Time Limit Reached",
-                                description: "No answer was recorded. Moving to the next question."
-                            });
-                            skipQuestion("Candidate failed to answer this question within the time limit.");
-                        }
+                        setIsQuestionExpired(true);
+                        toast({
+                            variant: "destructive",
+                            title: "Time Limit Reached",
+                            description: "No answer was recorded. Moving to the next question."
+                        });
+                        skipQuestion("Candidate failed to answer this question within the live answer time limit.");
                     }
                     return 0;
                 }
@@ -245,13 +403,13 @@ const InterviewSession: React.FC = () => {
 
             if (isRecording) {
                 setCurrentRecordingTime(prev => {
-                    if (prev >= 149) { // 2:30 min max limit (150s)
+                    if (prev >= LIVE_ANSWER_SECONDS - 1) {
                         stopRecording();
                         toast({
-                            title: "Recording Limit",
-                            description: "Maximum recording time of 2 minutes and 30 seconds reached."
+                            title: "Live Answer Captured",
+                            description: "Maximum live answer time reached. Generating the next question."
                         });
-                        return 150;
+                        return LIVE_ANSWER_SECONDS;
                     }
                     return prev + 1;
                 });
@@ -275,7 +433,6 @@ const InterviewSession: React.FC = () => {
             return streamRef.current;
         }
 
-        // Re-initialize if stream is dead or tracks stopped
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             streamRef.current = stream;
@@ -286,10 +443,157 @@ const InterviewSession: React.FC = () => {
             toast({
                 variant: "destructive",
                 title: "Camera Error",
-                description: "Could not access camera for retake. Please check permissions."
+                description: "Could not access camera and microphone. Please check permissions."
             });
             return null;
         }
+    };
+
+    const sendVideoFrame = () => {
+        const ws = wsRef.current;
+        const video = videoRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN || !video || video.readyState < 2) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(async (blob) => {
+            if (!blob || ws.readyState !== WebSocket.OPEN) return;
+            const data = arrayBufferToBase64(await blob.arrayBuffer());
+            ws.send(JSON.stringify({
+                type: 'video_frame',
+                mime_type: 'image/jpeg',
+                data,
+            }));
+        }, 'image/jpeg', 0.55);
+    };
+
+    const startLiveMediaStreaming = async (stream: MediaStream, ws: WebSocket) => {
+        const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+        const audioContext = new AudioContextCtor();
+        await audioContext.resume();
+
+        const source = audioContext.createMediaStreamSource(stream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+        processor.onaudioprocess = (event) => {
+            if (ws.readyState !== WebSocket.OPEN) return;
+
+            const output = event.outputBuffer.getChannelData(0);
+            output.fill(0);
+
+            const input = event.inputBuffer.getChannelData(0);
+            const pcm = pcm16FromFloat32(input, audioContext.sampleRate);
+            if (pcm.byteLength > 0) {
+                ws.send(pcm);
+            }
+        };
+
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        audioContextRef.current = audioContext;
+        audioSourceRef.current = source;
+        audioProcessorRef.current = processor;
+
+        sendVideoFrame();
+        videoFrameIntervalRef.current = setInterval(sendVideoFrame, 1000);
+    };
+
+    const openLiveSocket = async () => {
+        if (!sessionId) {
+            throw new Error("Session not found");
+        }
+
+        const token = await refreshAccessTokenForLiveSocket();
+
+        return new Promise<WebSocket>((resolve, reject) => {
+            let settled = false;
+
+            const fail = (error: Error) => {
+                if (!settled) {
+                    settled = true;
+                    reject(error);
+                }
+            };
+
+            const succeed = (ws: WebSocket) => {
+                if (!settled) {
+                    settled = true;
+                    resolve(ws);
+                }
+            };
+
+            const ws = new WebSocket(buildLiveSocketUrl(sessionId, token));
+            ws.binaryType = 'arraybuffer';
+            wsRef.current = ws;
+
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: 'start_answer' }));
+            };
+
+            ws.onmessage = (event) => {
+                if (typeof event.data !== 'string') return;
+                const message = JSON.parse(event.data);
+
+                if (message.type === 'listening') {
+                    setLiveStatus(message.message || 'AI is listening. Answer clearly and finish when done.');
+                    succeed(ws);
+                    return;
+                }
+
+                if (message.type === 'ready' || message.type === 'processing') {
+                    setLiveStatus(message.message || 'Live interview is processing...');
+                    return;
+                }
+
+                if (message.type === 'question') {
+                    applyInterviewResponse(message.data as InterviewResponse);
+                    return;
+                }
+
+                if (message.type === 'error') {
+                    const errorMessage = message.message || "Could not process this live answer.";
+                    cleanupLiveTransport();
+                    wsRef.current = null;
+                    setIsRecording(false);
+                    setIsProcessing(false);
+                    setLiveStatus('');
+
+                    if (!settled) {
+                        fail(new Error(errorMessage));
+                        return;
+                    }
+
+                    toast({
+                        variant: "destructive",
+                        title: "Live Interview Error",
+                        description: errorMessage
+                    });
+                }
+            };
+
+            ws.onerror = () => {
+                fail(new Error("Could not connect to the live interview model."));
+            };
+
+            ws.onclose = (event) => {
+                if (!settled && event.code !== 1000) {
+                    fail(new Error("Live interview connection closed before it was ready."));
+                }
+
+                if (event.code !== 1000 && (isRecording || isProcessing)) {
+                    cleanupLiveTransport();
+                    setIsRecording(false);
+                    setIsProcessing(false);
+                    setLiveStatus('');
+                }
+            };
+        });
     };
 
     const startRecording = async () => {
@@ -307,204 +611,32 @@ const InterviewSession: React.FC = () => {
             return;
         }
 
-        if (videoUrl) {
-            if (hasRetaken) {
-                toast({
-                    variant: "destructive",
-                    title: "Limit Reached",
-                    description: "Only one retake is allowed per question."
-                });
-                return;
-            }
-            // Retake logic: add 60 seconds to total question timer (capped at 180s)
-            setRecordingTimeLeft(prev => Math.min(180, prev + 60));
-            setHasRetaken(true);
-            URL.revokeObjectURL(videoUrl);
-            setVideoUrl(null);
-        }
-
-        // 1. Immediate UI feedback
         setIsRecording(true);
-        chunksRef.current = [];
+        setCurrentRecordingTime(0);
+        setLiveStatus("Connecting to AI Live...");
 
         try {
             const stream = await ensureStream();
             if (!stream) {
                 setIsRecording(false);
+                setLiveStatus('');
                 return;
             }
 
-            // Detect supported MIME type
-            let mimeType = 'video/webm;codecs=vp9';
-            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
-                mimeType = 'video/webm;codecs=vp9';
-            } else if (MediaRecorder.isTypeSupported('video/webm')) {
-                mimeType = 'video/webm';
-            } else if (MediaRecorder.isTypeSupported('video/mp4')) {
-                mimeType = 'video/mp4';
-            }
-
-            const mediaRecorder = new MediaRecorder(stream, { mimeType });
-            mediaRecorderRef.current = mediaRecorder;
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data && event.data.size > 0) {
-                    chunksRef.current.push(event.data);
-                }
-            };
-
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(chunksRef.current, { type: mimeType });
-                const url = URL.createObjectURL(blob);
-                setVideoUrl(url);
-                setIsRecording(false);
-                if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-
-                if (autoSubmitAfterStopRef.current) {
-                    autoSubmitAfterStopRef.current = false;
-                    submitResponseDirect(blob);
-                }
-            };
-
-            setCurrentRecordingTime(0); // Reset current recording duration
-            mediaRecorder.start(200); // Collect data periodically for better stability
+            const ws = await openLiveSocket();
+            await startLiveMediaStreaming(stream, ws);
+            setLiveStatus("AI is listening. Answer clearly and finish when done.");
         } catch (err) {
-            console.error("MediaRecorder start failed:", err);
-            toast({
-                variant: "destructive",
-                title: "Recording Failed",
-                description: "Could not start the camera recorder. Please refresh and try again."
-            });
+            console.error("Live interview start failed:", err);
+            cleanupLiveSession();
             setIsRecording(false);
-        }
-    };
-
-
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            mediaRecorderRef.current.stop();
-        }
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-
-
-    const submitResponseDirect = async (blobToSubmit: Blob) => {
-        if (!sessionId) return;
-        if (blobToSubmit.size === 0) {
+            setLiveStatus('');
             toast({
                 variant: "destructive",
-                title: "No Recording Found",
-                description: "Please record an answer before submitting."
+                title: "Live Interview Failed",
+                description: err instanceof Error ? err.message : "Could not start the live interview. Please try again."
             });
-            return;
         }
-        if (!document.fullscreenElement) {
-            await reenterFullscreen();
-            return;
-        }
-
-        setIsProcessing(true);
-        const formData = new FormData();
-        formData.append('video', blobToSubmit, 'response.webm');
-        formData.append('retaken', hasRetaken ? 'true' : 'false');
-
-        try {
-            const response = await apiWrapper.post(`/interview/${sessionId}/response`, formData);
-
-
-            if (!response.ok) {
-                let errorMessage = "Failed to submit response";
-                try {
-                    const errorData = await response.json();
-                    if (errorData?.detail) {
-                        errorMessage = errorData.detail;
-                    }
-                } catch (e) {
-                    // Response is not JSON (e.g., Nginx HTML error pages)
-                    if (response.status === 413) {
-                        errorMessage = "The video file is too large (exceeds 50-60 MB). Please keep your recording under 2 minutes 30 seconds.";
-                    } else if (response.status === 502 || response.status === 504) {
-                        errorMessage = "The server is temporarily busy or took too long to process the video. Please try again.";
-                    }
-                }
-                throw new Error(errorMessage);
-            }
-
-            const result: InterviewResponse = await response.json();
-
-            if (result.interview_ended) {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen().catch(() => { });
-                }
-                navigate(`/interview/results/${sessionId}`);
-            } else {
-                setQuestionData(result);
-                chunksRef.current = [];
-                setVideoUrl(null);
-                setRecordingTimeLeft(180); // Reset timer to 3 mins
-                setHasRetaken(false); // Reset retake flag
-                setIsQuestionExpired(false);
-            }
-        } catch (error) {
-            console.error(error);
-            toast({
-                title: "Upload Failed",
-                description: error instanceof Error ? error.message : "Error submitting response. Please try again.",
-                variant: "destructive"
-            });
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const applyInterviewResponse = (result: InterviewResponse) => {
-        if (result.interview_ended) {
-            if (document.fullscreenElement) {
-                document.exitFullscreen().catch(() => { });
-            }
-            navigate(`/interview/results/${sessionId}`);
-        } else {
-            setQuestionData(result);
-            chunksRef.current = [];
-            setVideoUrl(null);
-            setRecordingTimeLeft(180);
-            setHasRetaken(false);
-            setIsQuestionExpired(false);
-        }
-    };
-
-    const skipQuestion = async (reason: string) => {
-        if (!sessionId || isProcessing) return;
-
-        setIsProcessing(true);
-        const formData = new FormData();
-        formData.append('reason', reason);
-
-        try {
-            const response = await apiWrapper.post(`/interview/${sessionId}/skip`, formData);
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.detail || "Could not move to the next question.");
-            }
-            const result: InterviewResponse = await response.json();
-            applyInterviewResponse(result);
-        } catch (error) {
-            console.error(error);
-            toast({
-                title: "Question Skip Failed",
-                description: error instanceof Error ? error.message : "Could not move to the next question. Please try again.",
-                variant: "destructive"
-            });
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-
-    const submitResponse = async () => {
-        if (chunksRef.current.length === 0 || !sessionId) return;
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-        await submitResponseDirect(blob);
     };
 
     if (isMalpractice) {
@@ -517,15 +649,12 @@ const InterviewSession: React.FC = () => {
                         </div>
                         <h2 className="text-2xl font-bold text-foreground font-poppins">Interview Discarded</h2>
                         <p className="text-muted-foreground font-medium">
-                            This interview has been discarded due to malpractice (detected multiple tab switches or exiting full screen).
+                            This interview has been discarded due to malpractice.
                         </p>
                         <p className="text-sm text-muted-foreground">
                             No results will be generated for this session. Please maintain focus in your next attempt.
                         </p>
-                        <Button
-                            className="w-full bg-red-600 hover:bg-red-700 text-white shadow-glow-sm"
-                            onClick={() => navigate('/dashboard')}
-                        >
+                        <Button className="w-full bg-red-600 hover:bg-red-700 text-white shadow-glow-sm" onClick={() => navigate('/dashboard')}>
                             Return to Dashboard
                         </Button>
                     </CardContent>
@@ -545,23 +674,23 @@ const InterviewSession: React.FC = () => {
                         <div className="grid md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <h3 className="font-bold flex items-center gap-2 text-primary">
-                                    <Mic className="w-5 h-5" /> Video & Timer Rules
+                                    <Radio className="w-5 h-5" /> Live Video Rules
                                 </h3>
                                 <ul className="text-sm text-muted-foreground space-y-3">
                                     <li className="flex gap-2">
-                                        <span className="text-primary font-bold">•</span>
-                                        <span>You have exactly <strong>3 minutes (180s)</strong> total to read and answer each question.</span>
+                                        <span className="text-primary font-bold">&bull;</span>
+                                        <span>Your camera and microphone stream live while you answer.</span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-primary font-bold">•</span>
-                                        <span>Maximum single video recording duration is <strong>2 minutes 30 seconds (150s)</strong>.</span>
+                                        <span className="text-primary font-bold">&bull;</span>
+                                        <span>You get up to <strong>2 minutes</strong> per question.</span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-primary font-bold">•</span>
-                                        <span>You get <strong>one retake</strong> per question, adding <strong>1 minute</strong> to your remaining time (max 3 minutes total).</span>
+                                        <span className="text-primary font-bold">&bull;</span>
+                                        <span>Click <strong>Finish Answer</strong> when you are done speaking.</span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-primary font-bold">•</span>
+                                        <span className="text-primary font-bold">&bull;</span>
                                         <span>Ensure you are in a quiet, well-lit environment.</span>
                                     </li>
                                 </ul>
@@ -572,19 +701,19 @@ const InterviewSession: React.FC = () => {
                                 </h3>
                                 <ul className="text-sm text-muted-foreground space-y-3">
                                     <li className="flex gap-2">
-                                        <span className="text-red-500 font-bold">•</span>
+                                        <span className="text-red-500 font-bold">&bull;</span>
                                         <span>The interview must be conducted in <strong>Full Screen</strong> mode.</span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-red-500 font-bold">•</span>
+                                        <span className="text-red-500 font-bold">&bull;</span>
                                         <span><strong>Do not switch tabs</strong> or minimize the browser window.</span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-red-500 font-bold">•</span>
+                                        <span className="text-red-500 font-bold">&bull;</span>
                                         <span>Exiting full screen counts as a <strong>Warning</strong> and pauses the session.</span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-red-500 font-bold">•</span>
+                                        <span className="text-red-500 font-bold">&bull;</span>
                                         <span><strong>5 Warnings</strong> will result in immediate termination.</span>
                                     </li>
                                 </ul>
@@ -629,7 +758,7 @@ const InterviewSession: React.FC = () => {
                                     Preparing Your Questions...
                                 </>
                             ) : (
-                                "Start Interview Now"
+                                "Start Live Interview"
                             )}
                         </Button>
                     </CardContent>
@@ -650,11 +779,8 @@ const InterviewSession: React.FC = () => {
                         <p className="text-muted-foreground">
                             Full-screen mode is mandatory for this interview. Please return to full-screen to resume.
                         </p>
-                        <Button
-                            className="w-full gradient-primary"
-                            onClick={reenterFullscreen}
-                        >
-                            Resume Interview (Re-enter Full Screen)
+                        <Button className="w-full gradient-primary" onClick={reenterFullscreen}>
+                            Resume Interview
                         </Button>
                     </CardContent>
                 </Card>
@@ -667,7 +793,6 @@ const InterviewSession: React.FC = () => {
     return (
         <div className="container mx-auto py-6 max-w-4xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Question Section */}
                 <div className="space-y-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -696,80 +821,64 @@ const InterviewSession: React.FC = () => {
                                 <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
                                     <div
                                         className={`h-full transition-all duration-1000 ${recordingTimeLeft < 30 ? 'bg-red-500 animate-pulse' : 'bg-primary'}`}
-                                        style={{ width: `${(recordingTimeLeft / 180) * 100}%` }}
+                                        style={{ width: `${(recordingTimeLeft / QUESTION_SECONDS) * 100}%` }}
                                     ></div>
                                 </div>
                                 <span className="text-[11px] text-muted-foreground text-center mt-1">
-                                    Total question time: 3 mins. Answer will auto-submit when time runs out.
+                                    Live answer streams to Gemini while you speak.
                                 </span>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <div className="flex gap-4">
-                        {!isRecording && !videoUrl && (
+                    <div className="flex flex-col gap-3">
+                        {!isRecording && !isProcessing && (
                             <Button onClick={startRecording} className="w-full bg-red-600 hover:bg-red-700">
-                                <Mic className="mr-2 h-4 w-4" /> Start Recording
+                                <Mic className="mr-2 h-4 w-4" /> Start Answer
                             </Button>
                         )}
 
                         {isRecording && (
                             <Button onClick={stopRecording} variant="destructive" className="w-full">
-                                <Square className="mr-2 h-4 w-4" /> Stop Recording
+                                <Send className="mr-2 h-4 w-4" /> Finish Answer
                             </Button>
                         )}
 
-                        {videoUrl && (
-                            <div className="flex flex-col w-full">
-                                <div className="flex gap-2 w-full">
-                                    <Button onClick={startRecording} variant="outline" className="flex-1">
-                                        Retake
-                                    </Button>
-                                    <Button onClick={submitResponse} disabled={isProcessing} className="flex-1">
-                                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                                        Submit
-                                    </Button>
-                                </div>
-                                {isProcessing && (
-                                    <p className="text-sm text-muted-foreground text-center mt-2 animate-pulse font-medium">
-                                        your answer is being evaluated this may take upto a min or 2 . please wait .
-                                    </p>
-                                )}
-                            </div>
+                        {isProcessing && (
+                            <Button disabled className="w-full">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Analysing Live Answer
+                            </Button>
+                        )}
+
+                        {liveStatus && (
+                            <p className="text-sm text-muted-foreground text-center animate-pulse font-medium">
+                                {liveStatus}
+                            </p>
                         )}
                     </div>
                 </div>
 
-                {/* Video Section */}
                 <Card className="overflow-hidden">
                     <CardContent className="p-0 relative aspect-video bg-black">
-                        {/* Live Preview */}
                         <video
                             ref={videoRef}
                             autoPlay
                             muted
                             playsInline
-                            className={`w-full h-full object-cover ${videoUrl ? 'hidden' : 'block'}`}
+                            className="w-full h-full object-cover"
                         />
-
-                        {/* Playback Preview */}
-                        {videoUrl && (
-                            <video
-                                src={videoUrl}
-                                controls
-                                className="w-full h-full object-cover"
-                            />
-                        )}
 
                         {isRecording && (
                             <div className="absolute top-4 right-4 flex items-center gap-2 bg-red-600 text-white font-mono font-bold text-xs px-2.5 py-1 rounded-md animate-pulse z-20">
                                 <span className="flex h-2 w-2 rounded-full bg-white animate-ping"></span>
-                                REC: {formatTime(150 - currentRecordingTime)}
+                                LIVE: {formatTime(Math.max(0, LIVE_ANSWER_SECONDS - currentRecordingTime))}
                             </div>
                         )}
                     </CardContent>
                 </Card>
             </div>
+            <AdsterraResponsiveBanner className="mt-8 px-0" />
         </div>
     );
 };

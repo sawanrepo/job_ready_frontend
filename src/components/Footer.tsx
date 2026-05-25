@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { LEARN_URL } from '@/lib/learnLinks';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -7,7 +8,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-white/80 backdrop-blur-md border-t border-primary/10 py-12 mt-auto">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="space-y-4">
             <img src="/logo.png" alt="Job Ready" className="h-14 w-auto object-contain" />
@@ -48,6 +49,23 @@ const Footer: React.FC = () => {
               <li><a href="mailto:support@jobreadyai.in" className="text-muted-foreground hover:text-primary transition-colors">Support</a></li>
               <li><a href="mailto:contact@jobreadyai.in" className="text-muted-foreground hover:text-primary transition-colors">Contact</a></li>
               <li><a href="mailto:feedback@jobreadyai.in" className="text-muted-foreground hover:text-primary transition-colors">Feedback</a></li>
+            </ul>
+          </div>
+
+          {/* Resources */}
+          <div>
+            <h4 className="font-semibold mb-4 font-poppins text-foreground">Resources</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <a
+                  href={LEARN_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Read Articles
+                </a>
+              </li>
             </ul>
           </div>
         </div>

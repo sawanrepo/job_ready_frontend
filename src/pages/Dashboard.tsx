@@ -5,6 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { FileSearch, Zap, Download, Video, Mic, History } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { LearnCta } from '@/components/LearnCta';
+import { LEARN_LINKS } from '@/lib/learnLinks';
+import { AdsterraResponsiveBanner } from '@/components/AdsterraAd';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -132,10 +135,18 @@ const Dashboard = () => {
               >
                 Visit FAQ
               </Button>
+              <LearnCta
+                className="mt-6"
+                compact
+                description="Want to improve before applying? Read our career guides."
+                actionText="Career Guides"
+                href={LEARN_LINKS.articles}
+              />
             </CardContent>
           </Card>
         </div>
       </main>
+      <AdsterraResponsiveBanner className="max-w-6xl" />
       <Footer />
     </div>
   );

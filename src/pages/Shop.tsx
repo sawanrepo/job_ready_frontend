@@ -35,9 +35,15 @@ interface PackItem {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   icon: any;
   items: string[];
   popular?: boolean;
+  limitedOffer?: boolean;
+  offerSummary?: {
+    old: string;
+    current: string;
+  };
   color: string;
   bg: string;
 }
@@ -68,7 +74,9 @@ const Shop = () => {
       description: 'Single detailed ATS scan',
       price: 9,
       icon: FileSearch,
-      items: ['1 ATS Compatibility Report', 'Keyword Optimization Tips'],
+      items: ['3 ATS Compatibility Reports', 'Keyword Optimization Tips'],
+      limitedOffer: true,
+      offerSummary: { old: '1 ATS check', current: '3 ATS checks' },
       color: 'text-blue-600',
       bg: 'bg-blue-50'
     },
@@ -78,7 +86,9 @@ const Shop = () => {
       description: 'AI-powered job tailoring',
       price: 19,
       icon: Zap,
-      items: ['1 Professionally Tailored PDF', 'Targeted Keyword Injection'],
+      items: ['3 Professionally Tailored PDFs', 'Targeted Keyword Injection'],
+      limitedOffer: true,
+      offerSummary: { old: '1 resume tailor', current: '3 resume tailors' },
       color: 'text-purple-600',
       bg: 'bg-purple-50'
     },
@@ -88,7 +98,9 @@ const Shop = () => {
       description: 'Quick AI audio practice',
       price: 39,
       icon: Mic,
-      items: ['1 Rapid-Fire Session', 'Detailed Audio Feedback'],
+      items: ['3 Rapid-Fire Sessions', 'Detailed Audio Feedback'],
+      limitedOffer: true,
+      offerSummary: { old: '1 rapid interview', current: '3 rapid interviews' },
       color: 'text-orange-600',
       bg: 'bg-orange-50'
     },
@@ -96,9 +108,11 @@ const Shop = () => {
       id: 'video_one_time',
       name: 'Video Interview',
       description: 'Full video mock session',
-      price: 89,
+      price: 39,
+      originalPrice: 89,
       icon: Video,
       items: ['1 Full Mock Interview', 'AI Behavioral Analysis'],
+      limitedOffer: true,
       color: 'text-red-600',
       bg: 'bg-red-50'
     }
@@ -109,10 +123,12 @@ const Shop = () => {
       id: 'starter_pack',
       name: 'Starter Pack',
       description: 'Perfect for your first application',
-      price: 39,
+      price: 13,
+      originalPrice: 39,
       icon: TrendingUp,
       items: ['3 ATS Checks', '1 Resume Tailoring'],
       popular: true,
+      limitedOffer: true,
       color: 'text-green-600',
       bg: 'bg-green-50'
     },
@@ -120,9 +136,11 @@ const Shop = () => {
       id: 'resume_boost_pack',
       name: 'Resume Boost',
       description: 'Optimize multiple versions',
-      price: 89,
+      price: 25,
+      originalPrice: 89,
       icon: Rocket,
       items: ['5 ATS Checks', '3 Resume Tailorings'],
+      limitedOffer: true,
       color: 'text-indigo-600',
       bg: 'bg-indigo-50'
     },
@@ -130,9 +148,11 @@ const Shop = () => {
       id: 'interview_pack',
       name: 'Interview Ready',
       description: 'Ace the speaking rounds',
-      price: 139,
+      price: 49,
+      originalPrice: 139,
       icon: Crown,
       items: ['2 Audio Interviews', '1 Video Interview'],
+      limitedOffer: true,
       color: 'text-amber-600',
       bg: 'bg-amber-50'
     },
@@ -140,9 +160,11 @@ const Shop = () => {
       id: 'combo_pack',
       name: 'Ultimate Combo',
       description: 'Full career transformation',
-      price: 249,
+      price: 99,
+      originalPrice: 249,
       icon: Sparkles,
       items: ['5 ATS Checks', '5 Tailorings', '2 Audio', '1 Video'],
+      limitedOffer: true,
       color: 'text-pink-600',
       bg: 'bg-pink-50'
     }
@@ -217,6 +239,9 @@ const Shop = () => {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Choose from individual packs or save more with our hand-picked value bundles
           </p>
+          <Badge className="mt-4 bg-amber-100 text-amber-700 border border-amber-200 px-4 py-1 rounded-full">
+            Limited offer for early users
+          </Badge>
         </div>
 
         {/* Value Bundles */}
@@ -244,12 +269,20 @@ const Shop = () => {
                   <div className={`p-3 rounded-xl ${pack.bg} w-fit mb-4 group-hover:scale-110 transition-transform`}>
                     <pack.icon className={`h-6 w-6 ${pack.color}`} />
                   </div>
+                  {pack.limitedOffer && (
+                    <Badge className="mb-3 w-fit bg-amber-100 text-amber-700 border border-amber-200 text-[10px] uppercase tracking-wider">
+                      Limited Offer
+                    </Badge>
+                  )}
                   <CardTitle className="font-poppins">{pack.name}</CardTitle>
                   <CardDescription>{pack.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">₹{pack.price}</span>
+                  <div className="flex items-baseline gap-2">
+                    {pack.originalPrice && (
+                      <span className="text-sm font-semibold text-muted-foreground line-through">Rs. {pack.originalPrice}</span>
+                    )}
+                    <span className="text-3xl font-bold">Rs. {pack.price}</span>
                   </div>
                   <ul className="space-y-2">
                     {pack.items.map((item, i) => (
@@ -291,11 +324,28 @@ const Shop = () => {
                   <div className={`p-3 rounded-xl ${pack.bg} w-fit mb-4`}>
                     <pack.icon className={`h-6 w-6 ${pack.color}`} />
                   </div>
+                  {pack.limitedOffer && (
+                    <Badge className="mb-3 w-fit bg-amber-100 text-amber-700 border border-amber-200 text-[10px] uppercase tracking-wider">
+                      Limited Offer
+                    </Badge>
+                  )}
                   <CardTitle className="text-lg font-poppins">{pack.name}</CardTitle>
                   <CardDescription className="text-xs">{pack.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold mb-4">₹{pack.price}</div>
+                  <div className="mb-4 flex items-baseline gap-2">
+                    {pack.originalPrice && (
+                      <span className="text-sm font-semibold text-muted-foreground line-through">Rs. {pack.originalPrice}</span>
+                    )}
+                    <span className="text-2xl font-bold">Rs. {pack.price}</span>
+                  </div>
+                  {pack.offerSummary && (
+                    <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                      <span className="line-through text-muted-foreground">{pack.offerSummary.old}</span>
+                      <span className="mx-2">-&gt;</span>
+                      <span>{pack.offerSummary.current}</span>
+                    </div>
+                  )}
                   <ul className="space-y-2 mb-2">
                     {pack.items.map((item, i) => (
                       <li key={i} className="flex items-center text-xs text-muted-foreground">

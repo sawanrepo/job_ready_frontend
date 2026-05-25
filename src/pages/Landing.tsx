@@ -3,6 +3,8 @@ import { FeatureCard } from '@/components/FeatureCard';
 import { useNavigate } from 'react-router-dom';
 import { FileSearch, Zap, HelpCircle, ArrowRight, Info, ShoppingBag } from 'lucide-react';
 import Footer from '@/components/Footer';
+import { LearnCta } from '@/components/LearnCta';
+import { LEARN_LINKS } from '@/lib/learnLinks';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -119,6 +121,13 @@ const Landing = () => {
               gradient
             />
           </div>
+
+          <LearnCta
+            className="mt-10"
+            description="Explore resume, ATS, and interview tips before your next application."
+            actionText="Explore Guides"
+            href={LEARN_LINKS.articles}
+          />
         </div>
       </section>
 

@@ -13,6 +13,7 @@ import {
   Award,
   Zap
 } from 'lucide-react';
+import { AdsterraNativeAd, AdsterraRectangleAd, AdsterraResponsiveBanner } from '@/components/AdsterraAd';
 
 const About = () => {
   const navigate = useNavigate();
@@ -58,6 +59,8 @@ const About = () => {
               to help professionals create standout resumes and increase their chances of landing dream jobs.
             </p>
           </section>
+
+          <AdsterraNativeAd className="my-0 px-0" visibleClassName="w-full max-w-3xl" />
 
           <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="group hover:shadow-md transition-all duration-300">
@@ -117,6 +120,8 @@ const About = () => {
             </Card>
           </section>
 
+          <AdsterraResponsiveBanner className="my-0 px-0" />
+
           <section className="bg-secondary/30 rounded-2xl p-8 md:p-12 text-center">
             <h3 className="text-3xl font-bold mb-6 font-poppins">Our Mission</h3>
             <p className="text-lg text-muted-foreground max-w-4xl mx-auto leading-relaxed">
@@ -125,6 +130,8 @@ const About = () => {
               compete effectively in today's digital-first hiring landscape.
             </p>
           </section>
+
+          <AdsterraRectangleAd className="my-0 px-0" />
 
           <section className="space-y-8">
             <div className="text-center">

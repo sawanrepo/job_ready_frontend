@@ -21,6 +21,8 @@ import { toast } from '@/hooks/use-toast';
 import { useUsage } from '@/hooks/useUsage';
 import Navbar from '@/components/Navbar';
 import { validateJobDescription } from '@/utils/validation';
+import { LearnCta } from '@/components/LearnCta';
+import { LEARN_LINKS } from '@/lib/learnLinks';
 
 
 
@@ -235,6 +237,16 @@ const ATSCheck = () => {
             </Button>
           )}
         </div>
+
+        {!result && !isLoading && (
+          <LearnCta
+            className="mb-8"
+            compact
+            description="Learn how ATS scores work and how to improve your resume."
+            actionText="Learn More"
+            href={LEARN_LINKS.ats}
+          />
+        )}
 
         {/* Results */}
         <ATSResultDisplay result={result} isLoading={isLoading} />

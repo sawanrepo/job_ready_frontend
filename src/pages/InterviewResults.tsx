@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { InterviewResult } from '@/types/interview';
-import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, MessageSquareText } from 'lucide-react';
 import { apiWrapper } from '@/lib/apiWrapper';
+import { LearnCta } from '@/components/LearnCta';
+import { LEARN_LINKS } from '@/lib/learnLinks';
+import { AdsterraResponsiveBanner } from '@/components/AdsterraAd';
 
 const InterviewResults: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
@@ -32,8 +35,9 @@ const InterviewResults: React.FC = () => {
                 // Try the unified interview results endpoint first
                 let response = await apiWrapper.get(`/interview/${sessionId}/result`);
                 
-                // If not found, it might be under the audio-specific endpoint (or vice versa depending on router priority)
-                if (!response.ok) {
+                // If not found, it might be under the audio-specific endpoint.
+                // A 400 from the video endpoint usually means the video session is incomplete.
+                if (response.status === 404) {
                     response = await apiWrapper.get(`/interview/audio/${sessionId}/result`);
                 }
 
@@ -46,7 +50,10 @@ const InterviewResults: React.FC = () => {
                     return;
                 }
 
-                if (!response.ok) throw new Error('Failed to fetch results. The session might have expired or doesn\'t exist.');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Failed to fetch results. The session might have expired or doesn\'t exist.');
+                }
                 
                 const data = await response.json();
                 setResult(data);
@@ -139,6 +146,44 @@ const InterviewResults: React.FC = () => {
                 </CardContent>
 
             </Card>
+
+            {result.question_answer_pairs && result.question_answer_pairs.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <MessageSquareText className="h-5 w-5 text-primary" />
+                            Your Answers
+                        </CardTitle>
+                        <CardDescription>
+                            These are the questions and the transcribed answers used for your report.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                        {result.question_answer_pairs.map((item, index) => (
+                            <div key={index} className="rounded-lg border bg-muted/20 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                                    Question {index + 1}
+                                </p>
+                                <p className="mt-2 font-medium leading-relaxed">{item.question}</p>
+                                <div className="mt-4 rounded-md bg-background p-4 text-sm leading-relaxed text-muted-foreground">
+                                    {item.answer_text || 'No answer transcript available.'}
+                                </div>
+                            </div>
+                        ))}
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+                            Note: If a transcribed answer above does not match what you said, use it as a signal to improve clarity, pronunciation, and spoken English. Real hiring platforms can transcribe speech even less accurately, so clear delivery matters.
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            <LearnCta
+                description="Preparing for interviews? Read our interview preparation guides."
+                actionText="Explore Guides"
+                href={LEARN_LINKS.interviews}
+            />
+
+            <AdsterraResponsiveBanner className="px-0" />
         </div>
     );
 };

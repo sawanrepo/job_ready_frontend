@@ -10,6 +10,7 @@ import { apiWrapper } from '@/lib/apiWrapper';
 import { toast } from '@/hooks/use-toast';
 
 import Navbar from '@/components/Navbar';
+import { AdsterraResponsiveBanner } from '@/components/AdsterraAd';
 
 
 interface ATSResultData {
@@ -284,6 +285,7 @@ const ResumeHistory: React.FC = () => {
                     </div>
                 )}
             </div>
+            <AdsterraResponsiveBanner className="max-w-6xl" />
         </div>
     );
 };

@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import { apiWrapper } from '@/lib/apiWrapper';
+import { AdsterraResponsiveBanner } from '@/components/AdsterraAd';
 
 interface InterviewResultData {
     final_verdict: string;
@@ -18,16 +19,23 @@ interface InterviewResultData {
     strengths: string[];
     weaknesses: string[];
     improvement_suggestions: string;
+    question_answer_pairs?: {
+        question: string;
+        answer_text: string;
+        status?: string;
+    }[];
 }
 
 interface HistoryResponse {
     video: InterviewResultData | null;
     audio: InterviewResultData | null;
     video_meta?: {
+        session_id?: string | null;
         created_at: string | null;
         display_label?: string;
     };
     audio_meta?: {
+        session_id?: string | null;
         created_at: string | null;
         display_label?: string;
     };
@@ -127,7 +135,13 @@ const InterviewHistory: React.FC = () => {
                                 <Mic className="text-orange-500" /> Latest Audio Interview
                             </h2>
                             {history.audio ? (
-                                <ResultCard result={history.audio} type="Audio" color="orange" createdAt={history.audio_meta?.created_at} />
+                                <ResultCard
+                                    result={history.audio}
+                                    type="Audio"
+                                    createdAt={history.audio_meta?.created_at}
+                                    sessionId={history.audio_meta?.session_id}
+                                    onViewReport={(sessionId) => navigate(`/interview/results/${sessionId}`)}
+                                />
                             ) : (
                                 <Card className="p-8 text-center border-dashed flex flex-col items-center h-full justify-center text-muted-foreground">
                                     <Mic className="h-8 w-8 mb-4 opacity-50" />
@@ -143,7 +157,13 @@ const InterviewHistory: React.FC = () => {
                                 <Video className="text-red-500" /> Latest Video Interview
                             </h2>
                             {history.video ? (
-                                <ResultCard result={history.video} type="Video" color="red" createdAt={history.video_meta?.created_at} />
+                                <ResultCard
+                                    result={history.video}
+                                    type="Video"
+                                    createdAt={history.video_meta?.created_at}
+                                    sessionId={history.video_meta?.session_id}
+                                    onViewReport={(sessionId) => navigate(`/interview/results/${sessionId}`)}
+                                />
                             ) : (
                                 <Card className="p-8 text-center border-dashed flex flex-col items-center h-full justify-center text-muted-foreground">
                                     <Video className="h-8 w-8 mb-4 opacity-50" />
@@ -155,11 +175,24 @@ const InterviewHistory: React.FC = () => {
                     </div>
                 )}
             </div>
+            <AdsterraResponsiveBanner className="max-w-6xl" />
         </div>
     );
 };
 
-const ResultCard = ({ result, type, color, createdAt }: { result: InterviewResultData, type: string, color: string, createdAt?: string | null }) => {
+const ResultCard = ({
+    result,
+    type,
+    createdAt,
+    sessionId,
+    onViewReport,
+}: {
+    result: InterviewResultData;
+    type: string;
+    createdAt?: string | null;
+    sessionId?: string | null;
+    onViewReport: (sessionId: string) => void;
+}) => {
     const isReady = result.final_verdict === "Ready";
     return (
         <Card className="h-full hover:shadow-md transition-shadow">
@@ -205,6 +238,16 @@ const ResultCard = ({ result, type, color, createdAt }: { result: InterviewResul
                         </ul>
                     </div>
                 </div>
+
+                {sessionId && (
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => onViewReport(sessionId)}
+                    >
+                        View Full Report
+                    </Button>
+                )}
             </CardContent>
         </Card>
     );

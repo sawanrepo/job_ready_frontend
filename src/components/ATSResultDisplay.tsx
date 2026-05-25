@@ -14,6 +14,8 @@ import {
   TrendingUp,
   Hash
 } from 'lucide-react';
+import { LearnCta } from '@/components/LearnCta';
+import { LEARN_LINKS } from '@/lib/learnLinks';
 
 import ReactMarkdown from 'react-markdown';
 
@@ -315,6 +317,13 @@ export const ATSResultDisplay = ({ result, isLoading }: ATSResultDisplayProps) =
               </div>
             </div>
           )}
+
+          <LearnCta
+            className="animate-fade-in"
+            description="Learn how ATS scores work and how to improve your resume."
+            actionText="Learn More"
+            href={LEARN_LINKS.ats}
+          />
         </CardContent>
       </Card>
     </div>

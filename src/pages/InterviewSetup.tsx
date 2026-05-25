@@ -12,6 +12,8 @@ import { useUsage } from '@/hooks/useUsage';
 import Navbar from '@/components/Navbar';
 import { validateJobDescription } from '@/utils/validation';
 import { apiWrapper } from '@/lib/apiWrapper';
+import { LearnCta } from '@/components/LearnCta';
+import { LEARN_LINKS } from '@/lib/learnLinks';
 
 
 
@@ -267,6 +269,13 @@ const InterviewSetup: React.FC = () => {
                         </Button>
                     )}
                 </div>
+
+                <LearnCta
+                    compact
+                    description="Preparing for interviews? Read our interview preparation guides."
+                    actionText="Read Articles"
+                    href={LEARN_LINKS.interviews}
+                />
             </main>
         </div>
     );

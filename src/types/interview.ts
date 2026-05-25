@@ -23,4 +23,10 @@ export interface InterviewResult {
     improvement_suggestions: string[];
     final_verdict: string;
     feedback_summary: string;
+    warnings_count?: number;
+    question_answer_pairs?: {
+        question: string;
+        answer_text: string;
+        status?: string;
+    }[];
 }

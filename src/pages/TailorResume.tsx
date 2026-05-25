@@ -21,6 +21,8 @@ import { useUsage } from '@/hooks/useUsage';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from '@/components/Navbar';
 import { validateJobDescription } from '@/utils/validation';
+import { LearnCta } from '@/components/LearnCta';
+import { LEARN_LINKS } from '@/lib/learnLinks';
 
 const TailorResume = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -1060,6 +1062,12 @@ const TailorResume = () => {
                 </Card>
               </TabsContent>
             </Tabs>
+
+            <LearnCta
+              description="Learn how to tailor your resume for each job description before your next application."
+              actionText="Explore Guides"
+              href={LEARN_LINKS.resumeTailoring}
+            />
 
             <div className="text-center pt-4">
               <Button
