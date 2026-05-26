@@ -825,7 +825,7 @@ const InterviewSession: React.FC = () => {
                                     ></div>
                                 </div>
                                 <span className="text-[11px] text-muted-foreground text-center mt-1">
-                                    Live answer streams to Gemini while you speak.
+                                    Live answer streams to AI.
                                 </span>
                             </div>
                         </CardContent>
