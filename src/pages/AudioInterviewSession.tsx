@@ -907,8 +907,8 @@ const AudioInterviewSession: React.FC<AudioInterviewSessionProps> = () => {
                         </div>
                         <p className="text-muted-foreground text-center max-w-md">
                             {processingStage === 'generating_report'
-                                ? 'Your answers are transcribed. Our Ai is preparing your final performance report.'
-                                : 'AI is listening to your response. This can take a minute after the last recording.'}
+                                ? 'Your answers are transcribed. Our AI is preparing your final performance report.'
+                                : 'Our AI is listening to your response. This can take a minute after the last recording.'}
                         </p>
                     </div>
                 ) : (
